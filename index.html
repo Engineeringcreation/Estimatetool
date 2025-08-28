@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estimate For Civil/Electrical and Other Engineering Works, </title>
+    <title>Estimate For Civil/Electrical and Other Engineering Works</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
     <!-- Libraries for export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
@@ -30,10 +34,44 @@
         .user-info { background-color: #e9ecef; padding: 10px; border-radius: 5px; margin-bottom: 15px; }
         .password-toggle { cursor: pointer; }
         .merge-section { background-color: #fff8e1; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .loading { display: none; text-align: center; padding: 20px; }
+        .success-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            padding: 15px 25px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            animation: fadeIn 0.5s, fadeOut 0.5s 2.5s forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
     </style>
 </head>
 <body>
-<!-- Authentication Container (shown by default) -->
+    <!-- Success Message -->
+    <div id="successMessage" class="success-message" style="display: none;">
+        Operation completed successfully!
+    </div>
+
+    <!-- Loading indicator -->
+    <div id="loadingIndicator" class="loading">
+        <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+        <p>Loading data, please wait...</p>
+    </div>
+
+    <!-- Authentication Container (shown by default) -->
     <div id="authContainer" class="container">
         <div class="row">
             <div class="col-md-12">
@@ -42,8 +80,8 @@
                     <div class="alert alert-danger" id="loginError" style="display:none;"></div>
                     <form id="loginFormElement">
                         <div class="form-group">
-                            <label for="loginUsername">Username</label>
-                            <input type="text" class="form-control" id="loginUsername" required>
+                            <label for="loginEmail">Email</label>
+                            <input type="email" class="form-control" id="loginEmail" required>
                         </div>
                         <div class="form-group">
                             <label for="loginPassword">Password</label>
@@ -71,10 +109,6 @@
                         <div class="form-group">
                             <label for="registerName">Full Name</label>
                             <input type="text" class="form-control" id="registerName" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="registerUsername">Username</label>
-                            <input type="text" class="form-control" id="registerUsername" required>
                         </div>
                         <div class="form-group">
                             <label for="registerEmail">Email</label>
@@ -124,44 +158,10 @@
                         </div>
                     </form>
                 </div>
-
-                <div class="auth-container" id="resetPasswordForm" style="display:none;">
-                    <h2 class="text-center mb-4">Reset Password</h2>
-                    <div class="alert alert-danger" id="resetError" style="display:none;"></div>
-                    <div class="alert alert-success" id="resetSuccess" style="display:none;"></div>
-                    <form id="resetPasswordFormElement">
-                        <input type="hidden" id="resetToken">
-                        <div class="form-group">
-                            <label for="resetNewPassword">New Password</label>
-                            <div class="input-group">
-                                <input type="password" class="form-control" id="resetNewPassword" required>
-                                <div class="input-group-append">
-                                    <span class="input-group-text password-toggle" data-target="resetNewPassword">
-                                        <i class="fas fa-eye"></i>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="resetConfirmPassword">Confirm Password</label>
-                            <div class="input-group">
-                                <input type="password" class="form-control" id="resetConfirmPassword" required>
-                                <div class="input-group-append">
-                                    <span class="input-group-text password-toggle" data-target="resetConfirmPassword">
-                                        <i class="fas fa-eye"></i>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-block">Reset Password</button>
-                        <div class="text-center mt-3">
-                            <a href="#" id="showLoginFromReset">Back to Login</a>
-                        </div>
-                    </form>
-                </div>
             </div>
         </div>
     </div>
+    
     <!-- Application Container (hidden by default) -->
     <div id="appContainer" class="container mt-5" style="display:none;">
         <h1 class="text-center">Estimate For Civil/Electrical and Other Engineering Works</h1>
@@ -177,7 +177,7 @@
         </div>
 
         <div class="alert alert-info">
-            <strong>Instructions:</strong> Add projects, buildings, and items first. Then set your context and enter multiple measurements without reselecting For down load Itmes https://drive.google.com/file/d/1mgvrEengNe8K49-egINMs-6S4s2lS4hM/view?usp=sharing.
+            <strong>Instructions:</strong> Add projects, buildings, and items first. Then set your context and enter multiple measurements without reselecting.
         </div>
 
         <nav class="nav nav-tabs" id="mainTabs">
@@ -352,7 +352,7 @@
                                     <option value="sqm">Square Meter (Sqm)</option>
                                     <option value="m">Meter</option>
                                     <option value="kg">Kilogram (Kg)</option>
-					<option value="ltr">ltr (ltr)</option>
+                                    <option value="ltr">Liter (ltr)</option>
                                     <option value="no">Numbers (Nos)</option>
                                     <option value="lumsum">Lumsum (Lumsum)</option>
                                 </select>
@@ -562,7 +562,6 @@
                                 <option value="project-details">Project Details Abstract</option>
                                 <option value="project-cumulative">Project Cumulative Abstract</option>
                                 <option value="detailed-measurement">Detailed Measurement Sheet</option>
-                                <option value="merged-report">Merged Report (All Users)</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -601,7 +600,6 @@
                             <li>Your existing measurements will be preserved</li>
                             <li>New measurements from the imported file will be added</li>
                             <li>Duplicate measurements (based on all fields) will be skipped</li>
-                            <li>The original user information will be preserved for tracking</li>
                         </ul>
                     </div>
                 </div>
@@ -612,63 +610,31 @@
             © 2023 Estimate For Civil/Electrical and Other Engineering Works | Designed for Engineering Professionals
         </footer>
     </div>
-<!-- Font Awesome for icons -->
+
+    <!-- Font Awesome for icons -->
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 
     <script>
-        // Data storage using localStorage with user-specific keys
+        // Firebase configuration with databaseURL added
+        const firebaseConfig = {
+    	apiKey: "AIzaSyBLO5c7EJLmJfXDogaYfSL6ZrRsXxHT4X0",
+    	authDomain: "estimatemanager-65515.firebaseapp.com",   // stays same
+    	databaseURL: "https://estimatemanager-65515-default-rtdb.firebaseio.com/", // fixed (added /)
+    	projectId: "estimatemanager-65515",
+    	storageBucket: "estimatemanager-65515.appspot.com",     // fixed (was .app, now .appspot.com)
+    	messagingSenderId: "451897600691",
+    	appId: "1:451897600691:web:108fdbf6455e764c1c9ec6"
+	};
+
+
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        // Global variables
         let currentUser = null;
-        let users = JSON.parse(localStorage.getItem('users')) || [];
-        
-        function getUserProjectsKey() {
-            return `projects_${currentUser.username}`;
-        }
-        
-        function getUserBuildingsKey() {
-            return `buildings_${currentUser.username}`;
-        }
-        
-        function getUserItemsKey() {
-            return `items_${currentUser.username}`;
-        }
-        
-        function getUserMeasurementsKey() {
-            return `measurements_${currentUser.username}`;
-        }
-        
-        function getProjects() {
-            return JSON.parse(localStorage.getItem(getUserProjectsKey())) || [];
-        }
-        
-        function getBuildings() {
-            return JSON.parse(localStorage.getItem(getUserBuildingsKey())) || [];
-        }
-        
-        function getItems() {
-            return JSON.parse(localStorage.getItem(getUserItemsKey())) || [];
-        }
-        
-        function getMeasurements() {
-            return JSON.parse(localStorage.getItem(getUserMeasurementsKey())) || [];
-        }
-        
-        function saveProjects(data) {
-            localStorage.setItem(getUserProjectsKey(), JSON.stringify(data));
-        }
-        
-        function saveBuildings(data) {
-            localStorage.setItem(getUserBuildingsKey(), JSON.stringify(data));
-        }
-        
-        function saveItems(data) {
-            localStorage.setItem(getUserItemsKey(), JSON.stringify(data));
-        }
-        
-        function saveMeasurements(data) {
-            localStorage.setItem(getUserMeasurementsKey(), JSON.stringify(data));
-        }
-        
-        // Initialize data variables
         let projects = [];
         let buildings = [];
         let items = [];
@@ -683,17 +649,16 @@
         let currentUnit = '-';
         let currentRate = '-';
 
-        // Function to load data for current user
-        function loadUserData() {
-            projects = getProjects();
-            buildings = getBuildings();
-            items = getItems();
-            measurements = getMeasurements();
+        // Show success message
+        function showSuccess(message) {
+            const successElement = document.getElementById('successMessage');
+            successElement.textContent = message;
+            successElement.style.display = 'block';
             
-            loadProjectList();
-            loadBuildingList();
-            loadItemList();
-            loadRecords();
+            // Hide after 3 seconds
+            setTimeout(() => {
+                successElement.style.display = 'none';
+            }, 3000);
         }
 
         // Authentication functions
@@ -701,7 +666,6 @@
             document.getElementById('loginForm').style.display = 'block';
             document.getElementById('registerForm').style.display = 'none';
             document.getElementById('forgotPasswordForm').style.display = 'none';
-            document.getElementById('resetPasswordForm').style.display = 'none';
             document.getElementById('loginError').style.display = 'none';
         }
         
@@ -709,7 +673,6 @@
             document.getElementById('loginForm').style.display = 'none';
             document.getElementById('registerForm').style.display = 'block';
             document.getElementById('forgotPasswordForm').style.display = 'none';
-            document.getElementById('resetPasswordForm').style.display = 'none';
             document.getElementById('registerError').style.display = 'none';
         }
         
@@ -717,133 +680,197 @@
             document.getElementById('loginForm').style.display = 'none';
             document.getElementById('registerForm').style.display = 'none';
             document.getElementById('forgotPasswordForm').style.display = 'block';
-            document.getElementById('resetPasswordForm').style.display = 'none';
             document.getElementById('forgotError').style.display = 'none';
             document.getElementById('forgotSuccess').style.display = 'none';
         }
         
-        function showResetPassword(token) {
-            document.getElementById('loginForm').style.display = 'none';
-            document.getElementById('registerForm').style.display = 'none';
-            document.getElementById('forgotPasswordForm').style.display = 'none';
-            document.getElementById('resetPasswordForm').style.display = 'block';
-            document.getElementById('resetError').style.display = 'none';
-            document.getElementById('resetSuccess').style.display = 'none';
-            document.getElementById('resetToken').value = token;
+        // Show loading indicator
+        function showLoading() {
+            document.getElementById('loadingIndicator').style.display = 'block';
         }
         
-        function loginUser(username, password) {
-            const user = users.find(u => u.username === username && u.password === hashPassword(password));
-            if (user) {
-                currentUser = user;
-                localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                document.getElementById('authContainer').style.display = 'none';
-                document.getElementById('appContainer').style.display = 'block';
-                document.getElementById('currentUserName').textContent = currentUser.name;
-                loadUserData();
-                return true;
-            }
-            return false;
+        // Hide loading indicator
+        function hideLoading() {
+            document.getElementById('loadingIndicator').style.display = 'none';
         }
         
-        function registerUser(name, username, email, password) {
-            // Check if username already exists
-            if (users.some(u => u.username === username)) {
-                return { success: false, message: 'Username already exists' };
-            }
-            
-            // Check if email already exists
-            if (users.some(u => u.email === email)) {
-                return { success: false, message: 'Email already registered' };
-            }
-            
-            const newUser = {
-                name,
-                username,
-                email,
-                password: hashPassword(password),
-                createdAt: new Date().toISOString()
-            };
-            
-            users.push(newUser);
-            localStorage.setItem('users', JSON.stringify(users));
-            
-            return { success: true, user: newUser };
+        // Login user with email and password
+        function loginUser(email, password) {
+            showLoading();
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Signed in 
+                    currentUser = userCredential.user;
+                    document.getElementById('authContainer').style.display = 'none';
+                    document.getElementById('appContainer').style.display = 'block';
+                    document.getElementById('currentUserName').textContent = currentUser.displayName || currentUser.email;
+                    
+                    // Load user data
+                    loadUserData();
+                    hideLoading();
+                    showSuccess('Login successful!');
+                })
+                .catch((error) => {
+                    hideLoading();
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    document.getElementById('loginError').textContent = errorMessage;
+                    document.getElementById('loginError').style.display = 'block';
+                });
         }
         
+        // Register new user
+        function registerUser(name, email, password) {
+            showLoading();
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Signed in 
+                    currentUser = userCredential.user;
+                    
+                    // Update user profile with name
+                    currentUser.updateProfile({
+                        displayName: name
+                    }).then(() => {
+                        document.getElementById('authContainer').style.display = 'none';
+                        document.getElementById('appContainer').style.display = 'block';
+                        document.getElementById('currentUserName').textContent = name;
+                        
+                        // Initialize empty data for new user
+                        initializeUserData();
+                        hideLoading();
+                        showSuccess('Registration successful!');
+                    }).catch((error) => {
+                        hideLoading();
+                        document.getElementById('registerError').textContent = error.message;
+                        document.getElementById('registerError').style.display = 'block';
+                    });
+                })
+                .catch((error) => {
+                    hideLoading();
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    document.getElementById('registerError').textContent = errorMessage;
+                    document.getElementById('registerError').style.display = 'block';
+                });
+        }
+        
+        // Send password reset email
         function recoverPassword(email) {
-            const user = users.find(u => u.email === email);
-            if (!user) {
-                return { success: false, message: 'Email not found' };
-            }
-            
-            // Generate a secure reset token
-            const resetToken = Array.from(crypto.getRandomValues(new Uint8Array(32)))
-                .map(b => b.toString(16).padStart(2, '0')).join('');
-            
-            // Store token with expiration (1 hour)
-            user.resetToken = resetToken;
-            user.resetTokenExpires = Date.now() + 3600000; // 1 hour from now
-            localStorage.setItem('users', JSON.stringify(users));
-            
-            // In a real app, you would send an email here with a reset link
-            // For this demo, we'll simulate it by showing the token
-            const resetLink = `${window.location.href.split('?')[0]}?resetToken=${resetToken}`;
-            
-            return { 
-                success: true, 
-                message: `Password reset link has been sent to ${email}. 
-                        <br><br>For demo purposes only, your reset token is:
-                        <br><strong>${resetToken}</strong>
-                        <br><br>Click <a href="${resetLink}">here</a> to reset your password.`
+            showLoading();
+            auth.sendPasswordResetEmail(email)
+                .then(() => {
+                    hideLoading();
+                    document.getElementById('forgotSuccess').textContent = 'Password reset email sent!';
+                    document.getElementById('forgotSuccess').style.display = 'block';
+                })
+                .catch((error) => {
+                    hideLoading();
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    document.getElementById('forgotError').textContent = errorMessage;
+                    document.getElementById('forgotError').style.display = 'block';
+                });
+        }
+        
+        // Logout user
+        function logoutUser() {
+            auth.signOut().then(() => {
+                currentUser = null;
+                document.getElementById('authContainer').style.display = 'block';
+                document.getElementById('appContainer').style.display = 'none';
+                document.getElementById('loginFormElement').reset();
+                document.getElementById('loginError').style.display = 'none';
+                showLogin();
+            }).catch((error) => {
+                console.error('Logout error:', error);
+            });
+        }
+        
+        // Initialize user data in Firebase
+        function initializeUserData() {
+            const userData = {
+                projects: [],
+                buildings: [],
+                items: [],
+                measurements: []
             };
+            
+            return database.ref('users/' + currentUser.uid).set(userData)
+                .then(() => {
+                    projects = [];
+                    buildings = [];
+                    items = [];
+                    measurements = [];
+                    
+                    loadProjectList();
+                    loadBuildingList();
+                    loadItemList();
+                    loadRecords();
+                })
+                .catch((error) => {
+                    console.error('Error initializing user data:', error);
+                });
         }
         
-        function resetPassword(token, newPassword) {
-            // Find user with this token
-            const user = users.find(u => 
-                u.resetToken === token && 
-                u.resetTokenExpires > Date.now()
-            );
-            
-            if (!user) {
-                return { success: false, message: 'Invalid or expired reset token' };
-            }
-            
-            // Update password
-            user.password = hashPassword(newPassword);
-            user.resetToken = undefined;
-            user.resetTokenExpires = undefined;
-            
-            // Save changes
-            localStorage.setItem('users', JSON.stringify(users));
-            
-            return { success: true, message: 'Password has been reset successfully!' };
+        // Load user data from Firebase
+        function loadUserData() {
+            showLoading();
+            database.ref('users/' + currentUser.uid).once('value')
+                .then((snapshot) => {
+                    const userData = snapshot.val();
+                    
+                    if (userData) {
+                        projects = userData.projects || [];
+                        buildings = userData.buildings || [];
+                        items = userData.items || [];
+                        measurements = userData.measurements || [];
+                    } else {
+                        // Initialize data for new user
+                        return initializeUserData();
+                    }
+                })
+                .then(() => {
+                    loadProjectList();
+                    loadBuildingList();
+                    loadItemList();
+                    loadRecords();
+                    hideLoading();
+                })
+                .catch((error) => {
+                    hideLoading();
+                    console.error('Error loading user data:', error);
+                });
         }
         
-        // Simple password hashing (in a real app, use a proper hashing algorithm)
-        function hashPassword(password) {
-            return btoa(password); // Base64 encoding (not secure for production)
+        // Save data to Firebase
+        function saveData(dataType, data) {
+            if (!currentUser) return;
+            
+            const updates = {};
+            updates['users/' + currentUser.uid + '/' + dataType] = data;
+            
+            return database.ref().update(updates)
+                .then(() => {
+                    showSuccess('Data saved successfully!');
+                })
+                .catch((error) => {
+                    console.error('Error saving data:', error);
+                    alert('Error saving data. Please try again.');
+                });
         }
         
         // Event listeners for auth forms
         document.getElementById('loginFormElement').addEventListener('submit', function(e) {
             e.preventDefault();
-            const username = document.getElementById('loginUsername').value;
+            const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
             
-            if (loginUser(username, password)) {
-                // Success - already handled in loginUser
-            } else {
-                document.getElementById('loginError').textContent = 'Invalid username or password';
-                document.getElementById('loginError').style.display = 'block';
-            }
+            loginUser(email, password);
         });
         
         document.getElementById('registerFormElement').addEventListener('submit', function(e) {
             e.preventDefault();
             const name = document.getElementById('registerName').value;
-            const username = document.getElementById('registerUsername').value;
             const email = document.getElementById('registerEmail').value;
             const password = document.getElementById('registerPassword').value;
             const confirmPassword = document.getElementById('registerConfirmPassword').value;
@@ -854,58 +881,14 @@
                 return;
             }
             
-            const result = registerUser(name, username, email, password);
-            if (result.success) {
-                showLogin();
-                document.getElementById('loginUsername').value = username;
-                document.getElementById('loginPassword').value = '';
-                alert('Registration successful! Please login.');
-            } else {
-                document.getElementById('registerError').textContent = result.message;
-                document.getElementById('registerError').style.display = 'block';
-            }
+            registerUser(name, email, password);
         });
         
         document.getElementById('forgotPasswordFormElement').addEventListener('submit', function(e) {
             e.preventDefault();
             const email = document.getElementById('forgotEmail').value;
             
-            const result = recoverPassword(email);
-            if (result.success) {
-                document.getElementById('forgotSuccess').innerHTML = result.message;
-                document.getElementById('forgotSuccess').style.display = 'block';
-                document.getElementById('forgotError').style.display = 'none';
-            } else {
-                document.getElementById('forgotError').textContent = result.message;
-                document.getElementById('forgotError').style.display = 'block';
-                document.getElementById('forgotSuccess').style.display = 'none';
-            }
-        });
-        
-        document.getElementById('resetPasswordFormElement').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const token = document.getElementById('resetToken').value;
-            const newPassword = document.getElementById('resetNewPassword').value;
-            const confirmPassword = document.getElementById('resetConfirmPassword').value;
-            
-            if (newPassword !== confirmPassword) {
-                document.getElementById('resetError').textContent = 'Passwords do not match';
-                document.getElementById('resetError').style.display = 'block';
-                return;
-            }
-            
-            const result = resetPassword(token, newPassword);
-            if (result.success) {
-                document.getElementById('resetSuccess').textContent = result.message;
-                document.getElementById('resetSuccess').style.display = 'block';
-                document.getElementById('resetError').style.display = 'none';
-                // Auto-redirect to login after 3 seconds
-                setTimeout(() => showLogin(), 3000);
-            } else {
-                document.getElementById('resetError').textContent = result.message;
-                document.getElementById('resetError').style.display = 'block';
-                document.getElementById('resetSuccess').style.display = 'none';
-            }
+            recoverPassword(email);
         });
         
         // Navigation between auth forms
@@ -925,11 +908,6 @@
         });
         
         document.getElementById('showLoginFromForgot').addEventListener('click', function(e) {
-            e.preventDefault();
-            showLogin();
-        });
-        
-        document.getElementById('showLoginFromReset').addEventListener('click', function(e) {
             e.preventDefault();
             showLogin();
         });
@@ -955,54 +933,26 @@
         
         // Logout
         document.getElementById('logoutBtn').addEventListener('click', function() {
-            currentUser = null;
-            localStorage.removeItem('currentUser');
-            document.getElementById('authContainer').style.display = 'block';
-            document.getElementById('appContainer').style.display = 'none';
-            document.getElementById('loginFormElement').reset();
-            document.getElementById('loginError').style.display = 'none';
-            showLogin();
+            logoutUser();
         });
         
         // Check if user is already logged in
-        function checkLoggedIn() {
-            // Check for reset token in URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const resetToken = urlParams.get('resetToken');
-            
-            if (resetToken) {
-                showResetPassword(resetToken);
-                return;
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // User is signed in
+                currentUser = user;
+                document.getElementById('authContainer').style.display = 'none';
+                document.getElementById('appContainer').style.display = 'block';
+                document.getElementById('currentUserName').textContent = user.displayName || user.email;
+                loadUserData();
+            } else {
+                // User is signed out
+                document.getElementById('authContainer').style.display = 'block';
+                document.getElementById('appContainer').style.display = 'none';
+                showLogin();
             }
-            
-            const storedUser = localStorage.getItem('currentUser');
-            if (storedUser) {
-                currentUser = JSON.parse(storedUser);
-                const userExists = users.some(u => u.username === currentUser.username);
-                
-                if (userExists) {
-                    document.getElementById('authContainer').style.display = 'none';
-                    document.getElementById('appContainer').style.display = 'block';
-                    document.getElementById('currentUserName').textContent = currentUser.name;
-                    loadUserData();
-                } else {
-                    localStorage.removeItem('currentUser');
-                }
-            }
-        }
+        });
 
-        // [Rest of your existing JavaScript remains unchanged]
-        // ... (All your existing project management, building management, etc. code)
-        
-        // Initialize the application
-   
-
-
-
-
-
-
-        
         // Tab functionality
         document.querySelectorAll('#mainTabs .nav-link').forEach(tab => {
             tab.addEventListener('click', function(e) {
@@ -1153,15 +1103,18 @@
             const code = document.getElementById('projectCode').value;
             const location = document.getElementById('projectLocation').value;
             const description = document.getElementById('projectDescription').value;
+            
             if (name && code) {
                 projects.push({ name, code, location, description });
-                saveProjects(projects);
-                loadProjectList();
-                // Clear form
-                document.getElementById('projectName').value = '';
-                document.getElementById('projectCode').value = '';
-                document.getElementById('projectLocation').value = '';
-                document.getElementById('projectDescription').value = '';
+                saveData('projects', projects)
+                    .then(() => {
+                        loadProjectList();
+                        // Clear form
+                        document.getElementById('projectName').value = '';
+                        document.getElementById('projectCode').value = '';
+                        document.getElementById('projectLocation').value = '';
+                        document.getElementById('projectDescription').value = '';
+                    });
             }
         });
 
@@ -1183,9 +1136,11 @@
                 projects[index].location = document.getElementById('projectLocation').value;
                 projects[index].description = document.getElementById('projectDescription').value;
                 
-                saveProjects(projects);
-                loadProjectList();
-                resetProjectForm();
+                saveData('projects', projects)
+                    .then(() => {
+                        loadProjectList();
+                        resetProjectForm();
+                    });
             };
             
             document.getElementById('cancelEditProject').onclick = resetProjectForm;
@@ -1204,14 +1159,17 @@
             const name = document.getElementById('buildingName').value;
             const type = document.getElementById('buildingType').value;
             const floors = document.getElementById('numFloors').value;
+            
             if (project && name) {
                 buildings.push({ project, name, type, floors });
-                saveBuildings(buildings);
-                loadBuildingList();
-                // Clear form
-                document.getElementById('buildingName').value = '';
-                document.getElementById('buildingType').value = '-- Select Type --';
-                document.getElementById('numFloors').value = '';
+                saveData('buildings', buildings)
+                    .then(() => {
+                        loadBuildingList();
+                        // Clear form
+                        document.getElementById('buildingName').value = '';
+                        document.getElementById('buildingType').value = '-- Select Type --';
+                        document.getElementById('numFloors').value = '';
+                    });
             }
         });
 
@@ -1233,9 +1191,11 @@
                 buildings[index].type = document.getElementById('buildingType').value;
                 buildings[index].floors = document.getElementById('numFloors').value;
                 
-                saveBuildings(buildings);
-                loadBuildingList();
-                resetBuildingForm();
+                saveData('buildings', buildings)
+                    .then(() => {
+                        loadBuildingList();
+                        resetBuildingForm();
+                    });
             };
             
             document.getElementById('cancelEditBuilding').onclick = resetBuildingForm;
@@ -1256,17 +1216,20 @@
             const unit = document.getElementById('unit').value;
             const rate = document.getElementById('rate').value;
             const category = document.getElementById('category').value;
+            
             if (code && shortDesc) {
                 items.push({ code, description, shortDesc, unit, rate, category });
-                saveItems(items);
-                loadItemList();
-                // Clear form
-                document.getElementById('itemCode').value = '';
-                document.getElementById('itemDescription').value = '';
-                document.getElementById('shortDescription').value = '';
-                document.getElementById('unit').value = 'cum';
-                document.getElementById('rate').value = '';
-                document.getElementById('category').value = 'Earthwork';
+                saveData('items', items)
+                    .then(() => {
+                        loadItemList();
+                        // Clear form
+                        document.getElementById('itemCode').value = '';
+                        document.getElementById('itemDescription').value = '';
+                        document.getElementById('shortDescription').value = '';
+                        document.getElementById('unit').value = 'cum';
+                        document.getElementById('rate').value = '';
+                        document.getElementById('category').value = 'Earthwork';
+                    });
             }
         });
 
@@ -1292,9 +1255,11 @@
                 items[index].rate = document.getElementById('rate').value;
                 items[index].category = document.getElementById('category').value;
                 
-                saveItems(items);
-                loadItemList();
-                resetItemForm();
+                saveData('items', items)
+                    .then(() => {
+                        loadItemList();
+                        resetItemForm();
+                    });
             };
             
             document.getElementById('cancelEditItem').onclick = resetItemForm;
@@ -1424,6 +1389,8 @@
             }
             
             const rows = document.querySelectorAll('#measurementBody tr');
+            const newMeasurements = [];
+            
             rows.forEach(row => {
                 const m = {
                     project: currentProject,
@@ -1437,21 +1404,24 @@
                     length: parseFloat(row.querySelector('.length').value) || 0,
                     width: parseFloat(row.querySelector('.width').value) || 0,
                     height: parseFloat(row.querySelector('.height').value) || 0,
-                    qty: parseFloat(row.querySelector('.qty').textContent) || 0,
-                    user: currentUser.username // Track which user created this measurement
+                    qty: parseFloat(row.querySelector('.qty').textContent) || 0
                 };
-                if (currentEditIndex !== null) {
-                    measurements[currentEditIndex] = m;
-                    currentEditIndex = null;
-                } else {
-                    measurements.push(m);
-                }
+                newMeasurements.push(m);
             });
-            saveMeasurements(measurements);
-            document.getElementById('measurementBody').innerHTML = '';
-            updateTotalQty();
-            loadRecords();
-            alert('Measurements saved successfully!');
+            
+            if (currentEditIndex !== null) {
+                measurements[currentEditIndex] = newMeasurements[0];
+                currentEditIndex = null;
+            } else {
+                measurements = measurements.concat(newMeasurements);
+            }
+            
+            saveData('measurements', measurements)
+                .then(() => {
+                    document.getElementById('measurementBody').innerHTML = '';
+                    updateTotalQty();
+                    loadRecords();
+                });
         });
 
         // Reset Sheet
@@ -1525,7 +1495,7 @@
                     <td>${m.location}</td>
                     <td>${m.no1}</td>
                     <td>${m.no2}</td>
-                    <td>${m.no3}</td>
+                    <td>${m.no3</td>
                     <td>${m.length}</td>
                     <td>${m.width}</td>
                     <td>${m.height}</td>
@@ -1578,9 +1548,6 @@
                     break;
                 case 'detailed-measurement':
                     reportHTML = generateMeasurementSheet(project);
-                    break;
-                case 'merged-report':
-                    reportHTML = generateMergedReport(project);
                     break;
                 default:
                     reportHTML = '<div class="alert alert-danger">Invalid report type</div>';
@@ -1926,7 +1893,6 @@
                                         <th>Width</th>
                                         <th>Height</th>
                                         <th>Qty</th>
-                                        <th>Prepared By</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1943,7 +1909,6 @@
                                 <td>${measurement.width}</td>
                                 <td>${measurement.height}</td>
                                 <td>${measurement.qty.toFixed(2)}</td>
-                                <td>${measurement.user || currentUser.username}</td>
                             </tr>
                         `;
                     });
@@ -1954,7 +1919,6 @@
                                     <tr>
                                         <td colspan="7">Total</td>
                                         <td>${itemData.totalQty.toFixed(2)} ${itemData.item.unit}</td>
-                                        <td></td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -1963,131 +1927,6 @@
                 });
                 
                 html += `</div>`;
-            });
-            
-            return html;
-        }
-        
-        // Generate merged report (from all users)
-        function generateMergedReport(project) {
-            // Get all measurements for this project from all users
-            let allMeasurements = [];
-            let allBuildings = [];
-            let allItems = [];
-            
-            // Loop through all users in the system
-            users.forEach(user => {
-                const userMeasurements = JSON.parse(localStorage.getItem(`measurements_${user.username}`)) || [];
-                const userBuildings = JSON.parse(localStorage.getItem(`buildings_${user.username}`)) || [];
-                const userItems = JSON.parse(localStorage.getItem(`items_${user.username}`)) || [];
-                
-                // Filter for this project
-                const projectMeasurements = userMeasurements.filter(m => m.project === project.code);
-                const projectBuildings = userBuildings.filter(b => b.project === project.code);
-                
-                // Add to our collections
-                allMeasurements = allMeasurements.concat(projectMeasurements);
-                allBuildings = allBuildings.concat(projectBuildings);
-                
-                // For items, we need to deduplicate
-                userItems.forEach(item => {
-                    if (!allItems.some(i => i.code === item.code)) {
-                        allItems.push(item);
-                    }
-                });
-            });
-            
-            // Now generate a report similar to the building-wise report but with user info
-            const projectBuildings = [...new Set(allBuildings.map(b => b.name))];
-            
-            let html = `
-                <div class="report-title">
-                    <h3>Merged Report (All Users)</h3>
-                    <h4>Project: ${project.code} - ${project.name}</h4>
-                    <p>Location: ${project.location}</p>
-                </div>
-            `;
-            
-            projectBuildings.forEach(buildingName => {
-                const buildingMeasurements = allMeasurements.filter(m => m.building === buildingName);
-                const building = allBuildings.find(b => b.name === buildingName) || { type: 'Unknown' };
-                
-                // Group by item
-                const buildingItems = {};
-                
-                buildingMeasurements.forEach(measurement => {
-                    const item = allItems.find(i => i.code === measurement.itemCode);
-                    if (item) {
-                        if (!buildingItems[item.code]) {
-                            buildingItems[item.code] = {
-                                item,
-                                totalQty: 0,
-                                totalAmount: 0,
-                                users: new Set()
-                            };
-                        }
-                        
-                        const amount = measurement.qty * item.rate;
-                        buildingItems[item.code].totalQty += measurement.qty;
-                        buildingItems[item.code].totalAmount += amount;
-                        buildingItems[item.code].users.add(measurement.user || 'Unknown');
-                    }
-                });
-                
-                // Convert to array and sort
-                const itemsArray = Object.values(buildingItems);
-                itemsArray.sort((a, b) => b.totalAmount - a.totalAmount);
-                
-                // Calculate building total
-                const buildingTotal = itemsArray.reduce((sum, item) => sum + item.totalAmount, 0);
-                
-                // Build HTML for building
-                html += `
-                    <div class="building-group">
-                        <div class="building-header">
-                            ${buildingName} (${building.type})
-                        </div>
-                        <table class="report-table">
-                            <thead>
-                                <tr>
-                                    <th>Item Code</th>
-                                    <th>Item Description</th>
-                                    <th>Unit</th>
-                                    <th>Total Qty</th>
-                                    <th>Rate (₹)</th>
-                                    <th>Amount (₹)</th>
-                                    <th>Prepared By</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                `;
-                
-                itemsArray.forEach(itemData => {
-                    html += `
-                        <tr>
-                            <td>${itemData.item.code}</td>
-                            <td>${itemData.item.description}</td>
-                            <td>${itemData.item.unit}</td>
-                            <td>${itemData.totalQty.toFixed(2)}</td>
-                            <td>${itemData.item.rate}</td>
-                            <td>${itemData.totalAmount.toFixed(2)}</td>
-                            <td>${Array.from(itemData.users).join(', ')}</td>
-                        </tr>
-                    `;
-                });
-                
-                html += `
-                            </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td colspan="5">Total</td>
-                                    <td>₹${buildingTotal.toFixed(2)}</td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                `;
             });
             
             return html;
@@ -2105,12 +1944,13 @@
             try {
                 const wb = XLSX.utils.book_new();
                 
-                Array.from(tables).forEach((table, index) => {
+                Array.from(tables).forEach((table, index) {
                     const ws = XLSX.utils.table_to_sheet(table);
                     XLSX.utils.book_append_sheet(wb, ws, `Sheet${index+1}`);
                 });
                 
                 XLSX.writeFile(wb, 'report.xlsx');
+                showSuccess('Report exported to Excel successfully!');
             } catch (e) {
                 console.error(e);
                 alert('Error exporting to Excel. See console for details.');
@@ -2138,6 +1978,7 @@
                 
                 pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
                 pdf.save('report.pdf');
+                showSuccess('Report exported to PDF successfully!');
             }).catch(e => {
                 console.error(e);
                 alert('Error exporting to PDF. See console for details.');
@@ -2194,11 +2035,12 @@
                 // Create download link
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `${fileName}_${currentUser.username}.json`;
+                a.download = `${fileName}_${currentUser.uid}.json`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
+                showSuccess(`${fileName} exported successfully!`);
             } catch (e) {
                 console.error('Error exporting data:', e);
                 alert('Error exporting data. See console for details.');
@@ -2243,20 +2085,6 @@
             }
         }
 
-        // Merge data functions
-        function mergeData(existingData, newData, keyField) {
-            const merged = [...existingData];
-            const existingKeys = existingData.map(item => item[keyField]);
-            
-            newData.forEach(item => {
-                if (!existingKeys.includes(item[keyField])) {
-                    merged.push(item);
-                }
-            });
-            
-            return merged;
-        }
-
         // Export Projects
         document.getElementById('exportProjects').addEventListener('click', () => {
             exportData(projects, 'projects');
@@ -2273,10 +2101,12 @@
             importData(fileInput.files[0], (importedData) => {
                 // For import, we replace the existing data
                 projects = importedData;
-                saveProjects(projects);
-                loadProjectList();
-                alert(`Successfully imported ${importedData.length} projects (replaced existing data)`);
-                fileInput.value = '';
+                saveData('projects', projects)
+                    .then(() => {
+                        loadProjectList();
+                        alert(`Successfully imported ${importedData.length} projects (replaced existing data)`);
+                        fileInput.value = '';
+                    });
             });
         });
 
@@ -2296,10 +2126,12 @@
             importData(fileInput.files[0], (importedData) => {
                 // For import, we replace the existing data
                 buildings = importedData;
-                saveBuildings(buildings);
-                loadBuildingList();
-                alert(`Successfully imported ${importedData.length} buildings (replaced existing data)`);
-                fileInput.value = '';
+                saveData('buildings', buildings)
+                    .then(() => {
+                        loadBuildingList();
+                        alert(`Successfully imported ${importedData.length} buildings (replaced existing data)`);
+                        fileInput.value = '';
+                    });
             });
         });
 
@@ -2319,10 +2151,12 @@
             importData(fileInput.files[0], (importedData) => {
                 // For import, we replace the existing data
                 items = importedData;
-                saveItems(items);
-                loadItemList();
-                alert(`Successfully imported ${importedData.length} items (replaced existing data)`);
-                fileInput.value = '';
+                saveData('items', items)
+                    .then(() => {
+                        loadItemList();
+                        alert(`Successfully imported ${importedData.length} items (replaced existing data)`);
+                        fileInput.value = '';
+                    });
             });
         });
 
@@ -2342,10 +2176,12 @@
             importData(fileInput.files[0], (importedData) => {
                 // For import, we replace the existing data
                 measurements = importedData;
-                saveMeasurements(measurements);
-                loadRecords();
-                alert(`Successfully imported ${importedData.length} measurements (replaced existing data)`);
-                fileInput.value = '';
+                saveData('measurements', measurements)
+                    .then(() => {
+                        loadRecords();
+                        alert(`Successfully imported ${importedData.length} measurements (replaced existing data)`);
+                        fileInput.value = '';
+                    });
             });
         });
 
@@ -2373,10 +2209,12 @@
                     }
                 });
                 
-                saveMeasurements(measurements);
-                loadRecords();
-                alert(`Successfully merged ${addedCount} measurements (${importedData.length - addedCount} duplicates skipped)`);
-                fileInput.value = '';
+                saveData('measurements', measurements)
+                    .then(() => {
+                        loadRecords();
+                        alert(`Successfully merged ${addedCount} measurements (${importedData.length - addedCount} duplicates skipped)`);
+                        fileInput.value = '';
+                    });
             });
         });
 
@@ -2430,8 +2268,10 @@
                 if (confirm('Are you sure you want to delete this record?')) {
                     const index = parseInt(e.target.dataset.index);
                     measurements.splice(index, 1);
-                    saveMeasurements(measurements);
-                    loadRecords();
+                    saveData('measurements', measurements)
+                        .then(() => {
+                            loadRecords();
+                        });
                 }
             } else if (e.target.classList.contains('deleteProj')) {
                 if (confirm('Are you sure you want to delete this project? All related buildings and measurements will also be deleted.')) {
@@ -2440,19 +2280,23 @@
                     
                     // Delete related buildings
                     buildings = buildings.filter(b => b.project !== projectCode);
-                    saveBuildings(buildings);
                     
                     // Delete related measurements
                     measurements = measurements.filter(m => m.project !== projectCode);
-                    saveMeasurements(measurements);
                     
                     // Delete project
                     projects.splice(index, 1);
-                    saveProjects(projects);
                     
-                    loadProjectList();
-                    loadBuildingList();
-                    loadRecords();
+                    // Save all changes
+                    Promise.all([
+                        saveData('buildings', buildings),
+                        saveData('measurements', measurements),
+                        saveData('projects', projects)
+                    ]).then(() => {
+                        loadProjectList();
+                        loadBuildingList();
+                        loadRecords();
+                    });
                 }
             } else if (e.target.classList.contains('deleteBld')) {
                 if (confirm('Are you sure you want to delete this building? All related measurements will also be deleted.')) {
@@ -2461,14 +2305,18 @@
                     
                     // Delete related measurements
                     measurements = measurements.filter(m => m.building !== buildingName);
-                    saveMeasurements(measurements);
                     
                     // Delete building
                     buildings.splice(index, 1);
-                    saveBuildings(buildings);
                     
-                    loadBuildingList();
-                    loadRecords();
+                    // Save all changes
+                    Promise.all([
+                        saveData('buildings', buildings),
+                        saveData('measurements', measurements)
+                    ]).then(() => {
+                        loadBuildingList();
+                        loadRecords();
+                    });
                 }
             } else if (e.target.classList.contains('deleteItem')) {
                 if (confirm('Are you sure you want to delete this item? All related measurements will also be deleted.')) {
@@ -2477,20 +2325,24 @@
                     
                     // Delete related measurements
                     measurements = measurements.filter(m => m.itemCode !== itemCode);
-                    saveMeasurements(measurements);
                     
                     // Delete item
                     items.splice(index, 1);
-                    saveItems(items);
                     
-                    loadItemList();
-                    loadRecords();
+                    // Save all changes
+                    Promise.all([
+                        saveData('items', items),
+                        saveData('measurements', measurements)
+                    ]).then(() => {
+                        loadItemList();
+                        loadRecords();
+                    });
                 }
             }
         });
 
         // Initialize the application
-        checkLoggedIn();
+        showLogin();
     </script>
 </body>
 </html>
