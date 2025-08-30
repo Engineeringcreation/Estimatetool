@@ -9,6 +9,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -195,7 +198,106 @@
         .qty-input {
             width: 100%;
         }
-   </style>
+
+        /* New styles for related measurements */
+        .factor-input {
+            max-width: 150px;
+        }
+
+        /* Report buttons styling */
+        .report-format-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        /* Loading indicator */
+        .loading-indicator {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .loading-indicator i {
+            font-size: 2rem;
+            color: var(--secondary-color);
+        }
+        
+        /* Report filter section */
+        .report-filters {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        /* Category hierarchy styling */
+        .category-header {
+            background-color: #e9ecef;
+            font-weight: bold;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        
+        .main-item-header {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            padding: 6px 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            margin-left: 10px;
+        }
+        
+        .sub-item-row {
+            margin-left: 20px;
+        }
+
+        /* Modal styling for report options */
+        .modal-report-option {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+.report-header {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        border-left: 4px solid #3498db;
+    }
+    .report-title {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 10px;
+    }
+    .report-project-info {
+        margin-bottom: 5px;
+    }   
+/* Print styles */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #reportPreview, #reportPreview * {
+                visibility: visible;
+            }
+            #reportPreview {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+
+
+
+</style>
 </head>
 <body>
     <!-- Navigation Bar -->
@@ -231,7 +333,8 @@
         </div>
     </div>
 
-    <!-- Main Application -->
+        
+ <!-- Main Application -->
     <div id="appSection" class="d-none">
         <div class="container-fluid">
             <div class="row">
@@ -286,9 +389,10 @@
                     </ul>
                 </div>
 
-                <!-- Main Content -->
+
+<!-- Main Content -->
                 <div class="col-md-10 main-content">
-<!-- Projects Tab -->
+		 <!-- Projects Tab -->
                     <div class="tab-pane active" id="projects">
                         <div class="card">
                             <div class="card-header">
@@ -822,10 +926,216 @@
                         </div>
                     </div>
 
-                    <!-- Other tabs would be implemented similarly -->
-                    <!-- Related Measurements, Merge Data, and Reports tabs would follow the same pattern -->
+                    <!-- Related Measurements Tab -->
+                    <div class="tab-pane" id="relatedMeasurements">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Set Related Measurement Context</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="relatedContextForm">
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <label for="relatedContextProject" class="form-label">Project</label>
+                                            <select class="form-select" id="relatedContextProject" required>
+                                                <option value="">Select Project</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label for="relatedContextBuilding" class="form-label">Building</label>
+                                            <select class="form-select" id="relatedContextBuilding" required>
+                                                <option value="">Select Building</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label for="relatedContextCategory" class="form-label">Category</label>
+                                            <select class="form-select" id="relatedContextCategory" required>
+                                                <option value="">Select Category</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="relatedContextMainItem" class="form-label">Main Item</label>
+                                            <select class="form-select" id="relatedContextMainItem" required>
+                                                <option value="">Select Main Item</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="relatedContextSubItem" class="form-label">Sub Item</label>
+                                            <select class="form-select" id="relatedContextSubItem" required>
+                                                <option value="">Select Sub Item</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <button type="submit", class="btn btn-primary">Set Context</button>
+                                </form>
+                            </div>
+                        </div>
 
-                    <div class="tab-pane" id="reports">
+                        <div class="card" id="relatedMeasurementCard" style="display: none;">
+                            <div class="card-header">
+                                <h5 class="mb-0">Related Measurement Calculation</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="context-bar mb-4">
+                                    <strong>Context:</strong> 
+                                    <span id="relatedCurrentContext">Please set context first</span>
+                                </div>
+                                
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <label for="sourceSubItem" class="form-label">Source Sub Item (for quantity calculation)</label>
+                                        <select class="form-select" id="sourceSubItem">
+                                            <option value="">Select Source Sub Item</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="multiplicationFactor" class="form-label">Multiplication Factor</label>
+                                        <input type="number" class="form-control factor-input" id="multiplicationFactor" step="0.001" min="0" value="1">
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-4">
+                                    <div class="col-md-12">
+                                        <div class="d-flex align-items-center">
+                                            <span class="me-3">Calculated Quantity:</span>
+                                            <span id="calculatedQuantity" class="total-display">0.000</span>
+                                            <button type="button" class="btn btn-outline-primary ms-3" id="applyCalculatedQuantity">
+                                                Apply to Measurement
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <form id="relatedMeasurementForm">
+                                    <div id="relatedAdditionalRows">
+                                        <!-- Additional rows will be added here -->
+                                    </div>
+                                    
+                                    <div class="measurement-row">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-2 mb-3 measurement-col">
+                                                <label for="relatedLocation" class="form-label">Location</label>
+                                                <input type="text" class="form-control" id="relatedLocation">
+                                            </div>
+                                            <div class="col-md-1 mb-3 measurement-col">
+                                                <label for="relatedNo1" class="form-label">No1</label>
+                                                <input type="number" class="form-control" id="relatedNo1" value="1" min="1">
+                                            </div>
+                                            <div class="col-md-1 mb-3 measurement-col">
+                                                <label for="relatedNo2" class="form-label">No2</label>
+                                                <input type="number" class="form-control" id="relatedNo2" value="1" min="1">
+                                            </div>
+                                            <div class="col-md-1 mb-3 measurement-col">
+                                                <label for="relatedNo3" class="form-label">No3</label>
+                                                <input type="number" class="form-control" id="relatedNo3" value="1" min="1">
+                                            </div>
+                                            <div class="col-md-1 mb-3 measurement-col">
+                                                <label for="relatedLength" class="form-label">Length</label>
+                                                <input type="number" class="form-control measurement-input-sm" id="relatedLength" step="0.001" min="0">
+                                            </div>
+                                            <div class="col-md-1 mb-3 measurement-col">
+                                                <label for="relatedBreadth" class="form-label">Breadth</label>
+                                                <input type="number" class="form-control measurement-input-sm" id="relatedBreadth" step="0.001" min="0">
+                                            </div>
+                                            <div class="col-md-1 mb-3 measurement-col">
+                                                <label for="relatedHeight" class="form-label">Height</label>
+                                                <input type="number" class="form-control measurement-input-sm" id="relatedHeight" step="0.001" min="0">
+                                            </div>
+                                            <div class="col-md-2 mb-3 measurement-col">
+                                                <label for="relatedQuantity" class="form-label">Quantity</label>
+                                                <input type="number" class="form-control qty-input" id="relatedQuantity" step="0.001" min="0" readonly>
+                                            </div>
+                                            <div class="col-md-2 mb-3 action-buttons-container">
+                                                <button type="button" class="btn btn-sm btn-outline-danger" id="relatedClearForm">
+                                                    Clear
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-danger remove-row-btn" style="display: none;">
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="buttons-row">
+                                        <div>
+                                            <button type="button" class="btn btn-outline-primary" id="relatedAddRowBtn">
+                                                <i class="fas fa-plus me-1"></i>Add Row
+                                            </button>
+                                            <span class="total-display">
+                                                Total Quantity: <span id="relatedTotalQty">0.000</span>
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <button type="submit", class="btn btn-primary">
+                                                Save Related Measurements
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Saved Related Measurements</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-3">
+                                        <label for="relatedFilterProject" class="form-label">Filter by Project</label>
+                                        <select class="form-select" id="relatedFilterProject">
+                                            <option value="">All Projects</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="relatedFilterBuilding" class="form-label">Filter by Building</label>
+                                        <select class="form-select" id="relatedFilterBuilding">
+                                            <option value="">All Buildings</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="relatedFilterSubItemCode" class="form-label">Filter by Sub Item Code</label>
+                                        <select class="form-select" id="relatedFilterSubItemCode">
+                                            <option value="">All Sub Item Codes</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">&nbsp;</label>
+                                        <button class="btn btn-secondary w-100" id="relatedApplyFilters">Apply Filters</button>
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Project</th>
+                                                <th>Building</th>
+                                                <th>Sub Item</th>
+                                                <th>Source Sub Item</th>
+                                                <th>Source Qty</th>
+                                                <th>Multi Factor</th>
+                                                <th>Qty</th>
+                                                <th>Date</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="relatedMeasurementsList">
+                                            <!-- Related Measurements will be populated here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Merge Data Tab -->
+                    <div class="tab-pane" id="merge">
+                        <!-- ... existing merge content ... -->
+                    </div>
+
+<div class="tab-pane" id="reports">
                         <div class="card">
                             <div class="card-header">
                                 <h5 class="mb-0">Generate Reports</h5>
@@ -837,7 +1147,7 @@
                                             <div class="card-body text-center">
                                                 <h5>Detailed Measurements</h5>
                                                 <p class="text-muted">Portrait format</p>
-                                                <button class="btn btn-primary mt-2" id="generateDetailReport">
+                                                <button class="btn btn-primary mt-2 generate-report-btn" data-report-type="detail">
                                                     Generate Report
                                                 </button>
                                             </div>
@@ -848,7 +1158,7 @@
                                             <div class="card-body text-center">
                                                 <h5>Building-wise Abstract</h5>
                                                 <p class="text-muted">Portrait format</p>
-                                                <button class="btn btn-primary mt-2" id="generateBuildingReport">
+                                                <button class="btn btn-primary mt-2 generate-report-btn" data-report-type="building">
                                                     Generate Report
                                                 </button>
                                             </div>
@@ -859,7 +1169,7 @@
                                             <div class="card-body text-center">
                                                 <h5>Project Cumulative Abstract</h5>
                                                 <p class="text-muted">Portrait format</p>
-                                                <button class="btn btn-primary mt-2" id="generateCumulativeReport">
+                                                <button class="btn btn-primary mt-2 generate-report-btn" data-report-type="cumulative">
                                                     Generate Report
                                                 </button>
                                             </div>
@@ -872,11 +1182,37 @@
                                             <div class="card-body text-center">
                                                 <h5>Project Item-wise Summary</h5>
                                                 <p class="text-muted">Landscape format</p>
-                                                <button class="btn btn-primary mt-2" id="generateSummaryReport">
+                                                <button class="btn btn-primary mt-2 generate-report-btn" data-report-type="summary">
                                                     Generate Report
                                                 </button>
                                             </div>
                                         </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Report Preview Area -->
+                                <div class="card mt-4" id="reportPreviewCard" style="display: none;">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0">Report Preview</h5>
+                                        <div>
+                                            <button class="btn btn-sm btn-outline-secondary no-print" id="printReport">
+                                                <i class="fas fa-print me-1"></i>Print
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger no-print" id="exportPdf">
+                                                <i class="fas fa-file-pdf me-1"></i>PDF
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-success no-print" id="exportExcel">
+                                                <i class="fas fa-file-excel me-1"></i>Excel
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="reportPreview">
+                                            <!-- Report content will be displayed here -->
+                                        </div>
+                                    </div>
+                                    <div class="card-footer no-print">
+                                        <small class="text-muted">Note: Related measurements are included in all reports.</small>
                                     </div>
                                 </div>
                             </div>
@@ -887,6 +1223,68 @@
         </div>
     </div>
 
+    <!-- Report Options Modal -->
+    <div class="modal fade" id="reportOptionsModal" tabindex="-1" aria-labelledby="reportOptionsModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reportOptionsModalLabel">Report Options</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="modalReportProject" class="form-label">Project</label>
+                        <select class="form-select" id="modalReportProject" required>
+                            <option value="">Select Project</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modalReportBuilding" class="form-label">Building</label>
+                        <select class="form-select" id="modalReportBuilding">
+                            <option value="all">All Buildings</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="generateReportWithOptions">Generate Report</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Report Options Modal -->
+    <div class="modal fade" id="reportOptionsModal" tabindex="-1" aria-labelledby="reportOptionsModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reportOptionsModalLabel">Report Options</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="modalReportProject" class="form-label">Project</label>
+                        <select class="form-select" id="modalReportProject" required>
+                            <option value="">Select Project</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modalReportBuilding" class="form-label">Building</label>
+                        <select class="form-select" id="modalReportBuilding">
+                            <option value="all">All Buildings</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="generateReportWithOptions">Generate Report</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Firebase configuration
         const firebaseConfig = {
@@ -1031,7 +1429,28 @@
                     // Setup the dropdown change listeners
                     setupMeasurementDropdownListeners();
                     break;
-                // Additional cases for other tabs
+                case 'relatedMeasurements':
+                    loadRelatedMeasurements();
+                    loadProjectsForDropdown('relatedContextProject');
+                    loadProjectsForDropdown('relatedFilterProject');
+                    loadCategoriesForDropdown('relatedContextCategory');
+                    loadBuildingsForDropdown('relatedFilterBuilding');
+                    loadSubItemCodesForDropdown('relatedFilterSubItemCode');
+                    
+                    // Load initial dropdown data for related measurement context
+                    loadBuildingsForDropdown('relatedContextBuilding');
+                    loadMainItemsForDropdown('relatedContextMainItem');
+                    loadSubItemsForDropdown('relatedContextSubItem');
+                    
+                    // Setup the dropdown change listeners
+                    setupRelatedMeasurementDropdownListeners();
+                    break;
+                case 'reports':
+                    loadProjectsForDropdown('modalReportProject');
+                    break;
+                case 'merge':
+                    loadMergeHistory();
+                    break;
             }
         }
 
@@ -1089,6 +1508,7 @@
                 loadProjectsForDropdown('buildingProject');
                 loadProjectsForDropdown('contextProject');
                 loadProjectsForDropdown('filterProject');
+                loadProjectsForDropdown('modalReportProject');
             });
         }
 
@@ -1243,7 +1663,7 @@
                             <td>
                                 <button class="btn btn-sm btn-outline-primary me-1 edit-category-btn" data-id="${key}">
                                     <i class="fas fa-edit"></i>
-                                </button>
+                                    </button>
                                 <button class="btn btn-sm btn-outline-danger delete-category-btn" data-id="${key}">
                                     <i class="fas fa-trash"></i>
                                 </button>
@@ -1468,7 +1888,8 @@
                                     editSubItem(subItemId, subItems[subItemId]);
                                 });
                             });
-                                            document.querySelectorAll('.delete-sub-item-btn').forEach(btn => {
+                            
+                            document.querySelectorAll('.delete-sub-item-btn').forEach(btn => {
                                 btn.addEventListener('click', function() {
                                     const subItemId = this.getAttribute('data-id');
                                     deleteSubItem(subItemId);
@@ -1632,15 +2053,12 @@
                                             }
                                             
                                             const row = document.createElement('tr');
-                                         // Add data attributes for filtering
+                                            // Add data attributes for filtering
                                             row.setAttribute('data-project-id', measurement.projectId);
                                             row.setAttribute('data-building-id', measurement.buildingId);
                                             row.setAttribute('data-subitem-code', subItemCode);
-                                          
-
-
-
-						row.innerHTML = `
+                                            
+                                            row.innerHTML = `
                                                 <td>${projectName}</td>
                                                 <td>${buildingName}</td>
                                                 <td>${subItemName}</td>
@@ -1654,7 +2072,7 @@
                                                 <td>${measurement.quantity || ''}</td>
                                                 <td>${new Date(measurement.createdAt).toLocaleDateString()}</td>
                                                 <td>
-                                                    <button class="btn btn-sm btn-outline-primary me-1 edit-measurement-btn" data-id="${key}" data-subitem-code="${subItemCode}">
+                                                    <button class="btn btn-sm btn-outline-primary me-1 edit-measurement-btn" data-id="${key}">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
                                                     <button class="btn btn-sm btn-outline-danger delete-measurement-btn" data-id="${key}">
@@ -1687,14 +2105,7 @@
                 } else {
                     measurementsList.innerHTML = '<tr><td colspan="13" class="text-center">No measurements found</td></tr>';
                 }
-
-
-           });
-
-
-
-
-
+            });
         }
 
         // Setup dropdown change listeners for measurement context
@@ -1806,6 +2217,7 @@
                     });
             }
         });
+
 // Add these form submission handlers after the project form handler
 document.getElementById('buildingForm').addEventListener('submit', function(e) {
     e.preventDefault();
@@ -2775,7 +3187,1675 @@ document.getElementById('subItemForm').addEventListener('submit', function(e) {
             };
             reader.readAsText(file);
         }
+    
 
+
+    // Fix for measurement filters
+        function applyFilters() {
+            const projectFilter = document.getElementById('filterProject').value;
+            const buildingFilter = document.getElementById('filterBuilding').value;
+            const subItemCodeFilter = document.getElementById('filterSubItemCode').value;
+            
+            const rows = document.getElementById('measurementsList').querySelectorAll('tr');
+            
+            rows.forEach(row => {
+                const projectId = row.getAttribute('data-project-id');
+                const buildingId = row.getAttribute('data-building-id');
+                const subItemCode = row.getAttribute('data-subitem-code');
+                
+                const showRow = 
+                    (projectFilter === '' || projectId === projectFilter) &&
+                    (buildingFilter === '' || buildingId === buildingFilter) &&
+                    (subItemCodeFilter === '' || subItemCode === subItemCodeFilter);
+                
+                row.style.display = showRow ? '' : 'none';
+            });
+        }
+
+        document.getElementById('applyFilters').addEventListener('click', applyFilters);
+
+  
+
+        // Setup dropdown change listeners for related measurement context
+        function setupRelatedMeasurementDropdownListeners() {
+            // When project changes, update buildings dropdown
+            document.getElementById('relatedContextProject').addEventListener('change', function() {
+                const projectId = this.value;
+                if (projectId) {
+                    loadBuildingsForDropdown('relatedContextBuilding', projectId);
+                } else {
+                    // Clear buildings dropdown
+                    const dropdown = document.getElementById('relatedContextBuilding');
+                    while (dropdown.options.length > 1) {
+                        dropdown.remove(1);
+                    }
+                }
+            });
+
+            // When category changes, update main items dropdown
+            document.getElementById('relatedContextCategory').addEventListener('change', function() {
+                const categoryId = this.value;
+                if (categoryId) {
+                    loadMainItemsForDropdown('relatedContextMainItem', categoryId);
+                } else {
+                    // Clear main items dropdown
+                    const dropdown = document.getElementById('relatedContextMainItem');
+                    while (dropdown.options.length > 1) {
+                        dropdown.remove(1);
+                    }
+                }
+            });
+
+            // When main item changes, update sub items dropdown
+            document.getElementById('relatedContextMainItem').addEventListener('change', function() {
+                const mainItemId = this.value;
+                if (mainItemId) {
+                    loadSubItemsForDropdown('relatedContextSubItem', mainItemId);
+                    loadAllSubItemsForDropdown('sourceSubItem');
+                } else {
+                    // Clear sub items dropdown
+                    const dropdown = document.getElementById('relatedContextSubItem');
+                    while (dropdown.options.length > 1) {
+                        dropdown.remove(1);
+                    }
+                }
+            });
+            
+            // When sub item changes, update the context display
+            document.getElementById('relatedContextSubItem').addEventListener('change', function() {
+                updateRelatedContextDisplay();
+            });
+            
+            // When source sub item changes, calculate quantity
+            document.getElementById('sourceSubItem').addEventListener('change', function() {
+                calculateRelatedQuantity();
+            });
+            
+            // When multiplication factor changes, calculate quantity
+            document.getElementById('multiplicationFactor').addEventListener('input', function() {
+                calculateRelatedQuantity();
+            });
+        }
+        
+        function updateRelatedContextDisplay() {
+            const projectSelect = document.getElementById('relatedContextProject');
+            const buildingSelect = document.getElementById('relatedContextBuilding');
+            const categorySelect = document.getElementById('relatedContextCategory');
+            const mainItemSelect = document.getElementById('relatedContextMainItem');
+            const subItemSelect = document.getElementById('relatedContextSubItem');
+            
+            const projectText = projectSelect.options[projectSelect.selectedIndex]?.text || 'Not selected';
+            const buildingText = buildingSelect.options[buildingSelect.selectedIndex]?.text || 'Not selected';
+            const categoryText = categorySelect.options[categorySelect.selectedIndex]?.text || 'Not selected';
+            const mainItemText = mainItemSelect.options[mainItemSelect.selectedIndex]?.text || 'Not selected';
+            const subItemText = subItemSelect.options[subItemSelect.selectedIndex]?.text || 'Not selected';
+            
+            document.getElementById('relatedCurrentContext').textContent = 
+                `${projectText} > ${buildingText} > ${categoryText} > ${mainItemText} > ${subItemText}`;
+                
+            // Show the measurement card if context is set
+            if (projectSelect.value && buildingSelect.value && categorySelect.value && 
+                mainItemSelect.value && subItemSelect.value) {
+                document.getElementById('relatedMeasurementCard').style.display = 'block';
+            }
+        }
+        
+        function calculateRelatedQuantity() {
+            const sourceSubItemId = document.getElementById('sourceSubItem').value;
+            const factor = parseFloat(document.getElementById('multiplicationFactor').value) || 0;
+            
+            if (!sourceSubItemId) {
+                document.getElementById('calculatedQuantity').textContent = '0.000';
+                return;
+            }
+            
+            const user = auth.currentUser;
+            if (!user) return;
+            
+            // Get total quantity of the source sub item
+            const measurementsRef = database.ref('users/' + user.uid + '/measurements');
+            
+            measurementsRef.once('value', (snapshot) => {
+                const measurements = snapshot.val();
+                let totalQuantity = 0;
+                
+                if (measurements) {
+                    Object.keys(measurements).forEach(key => {
+                        const measurement = measurements[key];
+                        if (measurement.subItemId === sourceSubItemId) {
+                            totalQuantity += parseFloat(measurement.quantity) || 0;
+                        }
+                    });
+                }
+                
+                const calculatedQty = totalQuantity * factor;
+                document.getElementById('calculatedQuantity').textContent = calculatedQty.toFixed(3);
+            });
+        }
+        
+        function loadAllSubItemsForDropdown(dropdownId) {
+            const user = auth.currentUser;
+            if (!user) return;
+            
+            const subItemsRef = database.ref('users/' + user.uid + '/subItems');
+            const mainItemsRef = database.ref('users/' + user.uid + '/mainItems');
+            const categoriesRef = database.ref('users/' + user.uid + '/categories');
+            
+            subItemsRef.once('value', (snapshot) => {
+                const subItems = snapshot.val();
+                const dropdown = document.getElementById(dropdownId);
+                
+                // Clear existing options except the first one
+                while (dropdown.options.length > 1) {
+                    dropdown.remove(1);
+                }
+                
+                if (subItems) {
+                    // Get main item and category names for display
+                    mainItemsRef.once('value', (mainItemSnapshot) => {
+                        const mainItems = mainItemSnapshot.val();
+                        categoriesRef.once('value', (categorySnapshot) => {
+                            const categories = categorySnapshot.val();
+                            
+                            Object.keys(subItems).forEach(key => {
+                                const subItem = subItems[key];
+                                let mainItemName = 'Unknown Main Item';
+                                let categoryName = '';
+                                
+                                if (mainItems && mainItems[subItem.mainItemId]) {
+                                    const mainItem = mainItems[subItem.mainItemId];
+                                    mainItemName = `${mainItem.code} - ${mainItem.description}`;
+                                    
+                                    if (categories && categories[mainItem.categoryId]) {
+                                        categoryName = ` (${categories[mainItem.categoryId].name})`;
+                                    }
+                                }
+                                
+                                const option = document.createElement('option');
+                                option.value = key;
+                                option.textContent = `${subItem.code} - ${subItem.description}${categoryName}`;
+                                dropdown.appendChild(option);
+                            });
+                        });
+                    });
+                } else {
+                    const option = document.createElement('option');
+                    option.value = "";
+                    option.textContent = "No sub items available";
+                    option.disabled = true;
+                    dropdown.appendChild(option);
+                }
+            });
+        }
+
+        // Related Measurements Form Submission
+        document.getElementById('relatedContextForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const projectId = document.getElementById('relatedContextProject').value;
+            const buildingId = document.getElementById('relatedContextBuilding').value;
+            const categoryId = document.getElementById('relatedContextCategory').value;
+            const mainItemId = document.getElementById('relatedContextMainItem').value;
+            const subItemId = document.getElementById('relatedContextSubItem').value;
+            
+            if (!projectId || !buildingId || !categoryId || !mainItemId || !subItemId) {
+                alert('Please select all context options');
+                return;
+            }
+            
+            // Get the names for display
+            const user = auth.currentUser;
+            if (!user) return;
+            
+            const projectsRef = database.ref('users/' + user.uid + '/projects');
+            const buildingsRef = database.ref('users/' + user.uid + '/buildings');
+            const categoriesRef = database.ref('users/' + user.uid + '/categories');
+            const mainItemsRef = database.ref('users/' + user.uid + '/mainItems');
+            const subItemsRef = database.ref('users/' + user.uid + '/subItems');
+            
+            Promise.all([
+                projectsRef.child(projectId).once('value'),
+                buildingsRef.child(buildingId).once('value'),
+                categoriesRef.child(categoryId).once('value'),
+                mainItemsRef.child(mainItemId).once('value'),
+                subItemsRef.child(subItemId).once('value')
+            ]).then(([projectSnap, buildingSnap, categorySnap, mainItemSnap, subItemSnap]) => {
+                const project = projectSnap.val();
+                const building = buildingSnap.val();
+                const category = categorySnap.val();
+                const mainItem = mainItemSnap.val();
+                const subItem = subItemSnap.val();
+                
+                const contextText = `${project.name} > ${building.name} > ${category.categoryNo} - ${category.name} > ${mainItem.code} - ${mainItem.description} > ${subItem.code} - ${subItem.description}`;
+                
+                document.getElementById('relatedCurrentContext').textContent = contextText;
+                
+                // Store the context in global variables for use in measurement saving
+                window.relatedCurrentContext = {
+                    projectId,
+                    buildingId,
+                    categoryId,
+                    mainItemId,
+                    subItemId,
+                    unit: subItem.unit
+                };
+                
+                // Show the measurement card
+                document.getElementById('relatedMeasurementCard').style.display = 'block';
+                
+                // Load all sub items for the source dropdown
+                loadAllSubItemsForDropdown('sourceSubItem');
+            }).catch(error => {
+                alert('Error setting context: ' + error.message);
+            });
+        });
+
+        // Apply calculated quantity to measurement form
+        document.getElementById('applyCalculatedQuantity').addEventListener('click', function() {
+            const calculatedQty = parseFloat(document.getElementById('calculatedQuantity').textContent) || 0;
+            document.getElementById('relatedQuantity').value = calculatedQty.toFixed(3);
+            updateRelatedTotalQuantity();
+        });
+
+        // Related Measurements Form Submission
+        document.getElementById('relatedMeasurementForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!window.relatedCurrentContext) {
+                alert('Please set the context first');
+                return;
+            }
+            
+            const user = auth.currentUser;
+            if (!user) return;
+            
+            const measurementsRef = database.ref('users/' + user.uid + '/relatedMeasurements');
+            
+            // Get source sub item and factor values
+            const sourceSubItemId = document.getElementById('sourceSubItem').value;
+            const multiplicationFactor = parseFloat(document.getElementById('multiplicationFactor').value) || 0;
+            const calculatedQty = parseFloat(document.getElementById('calculatedQuantity').textContent) || 0;
+            
+            // Get data from the main form
+            const mainFormData = {
+                projectId: window.relatedCurrentContext.projectId,
+                buildingId: window.relatedCurrentContext.buildingId,
+                categoryId: window.relatedCurrentContext.categoryId,
+                mainItemId: window.relatedCurrentContext.mainItemId,
+                subItemId: window.relatedCurrentContext.subItemId,
+                sourceSubItemId: sourceSubItemId,
+                multiplicationFactor: multiplicationFactor,
+                sourceQuantity: calculatedQty / multiplicationFactor,
+                location: document.getElementById('relatedLocation').value,
+                no1: parseFloat(document.getElementById('relatedNo1').value) || 0,
+                no2: parseFloat(document.getElementById('relatedNo2').value) || 0,
+                no3: parseFloat(document.getElementById('relatedNo3').value) || 0,
+                length: parseFloat(document.getElementById('relatedLength').value) || 0,
+                breadth: parseFloat(document.getElementById('relatedBreadth').value) || 0,
+                height: parseFloat(document.getElementById('relatedHeight').value) || 0,
+                quantity: calculatedQty,
+                createdAt: new Date().toISOString()
+            };
+            
+            // Check if we're in edit mode
+            const editMode = this.getAttribute('data-edit-mode');
+            if (editMode) {
+                // Update existing measurement - delete old and create new
+                measurementsRef.child(editMode).remove()
+                    .then(() => {
+                        // Now save the updated measurement
+                        return measurementsRef.push(mainFormData);
+                    })
+                    .then(() => {
+                        alert('Related measurement updated successfully!');
+                        resetRelatedMeasurementForm();
+                        this.removeAttribute('data-edit-mode');
+                        loadRelatedMeasurements();
+                    })
+                    .catch(error => {
+                        alert('Error updating measurement: ' + error.message);
+                    });
+            } else {
+                // Save the main form measurement
+                measurementsRef.push(mainFormData)
+                    .then(() => {
+                        // Now save additional rows if any
+                        const additionalRows = document.getElementById('relatedAdditionalRows');
+                        const rows = additionalRows.querySelectorAll('.measurement-row');
+                        
+                        if (rows.length === 0) {
+                            // No additional rows, just show success message
+                            alert('Related measurement saved successfully!');
+                            resetRelatedMeasurementForm();
+                            loadRelatedMeasurements();
+                            return;
+                        }
+                        
+                        // Save each additional row
+                        const savePromises = [];
+                        
+                        rows.forEach(row => {
+                            const rowData = {
+                                projectId: window.relatedCurrentContext.projectId,
+                                buildingId: window.relatedCurrentContext.buildingId,
+                                categoryId: window.relatedCurrentContext.categoryId,
+                                mainItemId: window.relatedCurrentContext.mainItemId,
+                                subItemId: window.relatedCurrentContext.subItemId,
+                                sourceSubItemId: sourceSubItemId,
+                                multiplicationFactor: multiplicationFactor,
+                                sourceQuantity: calculatedQty / multiplicationFactor,
+                                location: row.querySelector('.location-input').value,
+                                no1: parseFloat(row.querySelector('.no1-input').value) || 0,
+                                no2: parseFloat(row.querySelector('.no2-input').value) || 0,
+                                no3: parseFloat(row.querySelector('.no3-input').value) || 0,
+                                length: parseFloat(row.querySelector('.length-input').value) || 0,
+                                breadth: parseFloat(row.querySelector('.breadth-input').value) || 0,
+                                height: parseFloat(row.querySelector('.height-input').value) || 0,
+                                quantity: parseFloat(row.querySelector('.quantity-input').value) || 0,
+                                createdAt: new Date().toISOString()
+                            };
+                            
+                            savePromises.push(measurementsRef.push(rowData));
+                        });
+                        
+                        // Wait for all measurements to be saved
+                        Promise.all(savePromises)
+                            .then(() => {
+                                alert('All related measurements saved successfully!');
+                                resetRelatedMeasurementForm();
+                                loadRelatedMeasurements();
+                            })
+                            .catch(error => {
+                                alert('Error saving some measurements: ' + error.message);
+                            });
+                    })
+                    .catch(error => {
+                        alert('Error saving measurement: ' + error.message);
+                    });
+            }
+        });
+
+        function resetRelatedMeasurementForm() {
+            // Reset main form
+            document.getElementById('relatedLocation').value = '';
+            document.getElementById('relatedNo1').value = 1;
+            document.getElementById('relatedNo2').value = 1;
+            document.getElementById('relatedNo3').value = 1;
+            document.getElementById('relatedLength').value = '';
+            document.getElementById('relatedBreadth').value = '';
+            document.getElementById('relatedHeight').value = '';
+            document.getElementById('relatedQuantity').value = '';
+            
+            // Clear additional rows
+            document.getElementById('relatedAdditionalRows').innerHTML = '';
+            
+            // Reset total quantity
+            document.getElementById('relatedTotalQty').textContent = '0.000';
+            
+            // Remove edit mode if exists
+            const form = document.getElementById('relatedMeasurementForm');
+            if (form.hasAttribute('data-edit-mode')) {
+                form.removeAttribute('data-edit-mode');
+            }
+        }
+
+        function loadRelatedMeasurements() {
+            const user = auth.currentUser;
+            if (!user) return;
+            
+            const measurementsRef = database.ref('users/' + user.uid + '/relatedMeasurements');
+            const projectsRef = database.ref('users/' + user.uid + '/projects');
+            const buildingsRef = database.ref('users/' + user.uid + '/buildings');
+            const subItemsRef = database.ref('users/' + user.uid + '/subItems');
+            const mainItemsRef = database.ref('users/' + user.uid + '/mainItems');
+            const categoriesRef = database.ref('users/' + user.uid + '/categories');
+            
+            measurementsRef.on('value', (snapshot) => {
+                const measurements = snapshot.val();
+                const measurementsList = document.getElementById('relatedMeasurementsList');
+                measurementsList.innerHTML = '';
+                
+                if (measurements) {
+                    // Get related data for display
+                    projectsRef.once('value', (projectSnapshot) => {
+                        const projects = projectSnapshot.val();
+                        buildingsRef.once('value', (buildingSnapshot) => {
+                            const buildings = buildingSnapshot.val();
+                            subItemsRef.once('value', (subItemSnapshot) => {
+                                const subItems = subItemSnapshot.val();
+                                mainItemsRef.once('value', (mainItemSnapshot) => {
+                                    const mainItems = mainItemSnapshot.val();
+                                    categoriesRef.once('value', (categorySnapshot) => {
+                                        const categories = categorySnapshot.val();
+                                        
+                                        Object.keys(measurements).forEach(key => {
+                                            const measurement = measurements[key];
+                                            
+                                            const projectName = projects && projects[measurement.projectId] ? 
+                                                projects[measurement.projectId].name : 'Unknown Project';
+                                            
+                                            const buildingName = buildings && buildings[measurement.buildingId] ? 
+                                                buildings[measurement.buildingId].name : 'Unknown Building';
+                                            
+                                            let subItemName = 'Unknown Sub Item';
+                                            if (subItems && subItems[measurement.subItemId]) {
+                                                const subItem = subItems[measurement.subItemId];
+                                                subItemName = `${subItem.code} - ${subItem.description}`;
+                                            }
+                                            
+                                            let sourceSubItemName = 'Unknown Source';
+                                            if (subItems && subItems[measurement.sourceSubItemId]) {
+                                                const sourceSubItem = subItems[measurement.sourceSubItemId];
+                                                sourceSubItemName = `${sourceSubItem.code} - ${sourceSubItem.description}`;
+                                            }
+                                            
+                                            const row = document.createElement('tr');
+                                            row.setAttribute('data-project-id', measurement.projectId);
+                                            row.setAttribute('data-building-id', measurement.buildingId);
+                                            row.setAttribute('data-subitem-code', measurement.subItemId);
+                                            
+                                            row.innerHTML = `
+                                                <td>${projectName}</td>
+                                                <td>${buildingName}</td>
+                                                <td>${subItemName}</td>
+                                                <td>${sourceSubItemName}</td>
+                                                <td>${measurement.sourceQuantity ? measurement.sourceQuantity.toFixed(3) : '0.000'}</td>
+                                                <td>${measurement.multiplicationFactor || '1.000'}</td>
+                                                <td>${measurement.quantity || '0.000'}</td>
+                                                <td>${new Date(measurement.createdAt).toLocaleDateString()}</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-primary me-1 edit-related-measurement-btn" data-id="${key}">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-danger delete-related-measurement-btn" data-id="${key}">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </td>
+                                            `;
+                                            measurementsList.appendChild(row);
+                                        });
+                                        
+                                        // Add event listeners to edit and delete buttons
+                                        document.querySelectorAll('.edit-related-measurement-btn').forEach(btn => {
+                                            btn.addEventListener('click', function() {
+                                                const measurementId = this.getAttribute('data-id');
+                                                editRelatedMeasurement(measurementId, measurements[measurementId]);
+                                            });
+                                        });
+                                        
+                                        document.querySelectorAll('.delete-related-measurement-btn').forEach(btn => {
+                                            btn.addEventListener('click', function() {
+                                                const measurementId = this.getAttribute('data-id');
+                                                deleteRelatedMeasurement(measurementId);
+                                            });
+                                        });
+                                    });
+                                });
+                            });
+                        });
+                    });
+                } else {
+                    measurementsList.innerHTML = '<tr><td colspan="9" class="text-center">No related measurements found</td></tr>';
+                }
+            });
+        }
+
+        function editRelatedMeasurement(measurementId, measurementData) {
+            // Set the context first
+            document.getElementById('relatedContextProject').value = measurementData.projectId;
+            document.getElementById('relatedContextBuilding').value = measurementData.buildingId;
+            document.getElementById('relatedContextCategory').value = measurementData.categoryId;
+            document.getElementById('relatedContextMainItem').value = measurementData.mainItemId;
+            document.getElementById('relatedContextSubItem').value = measurementData.subItemId;
+            
+            // Set the source sub item and factor
+            document.getElementById('sourceSubItem').value = measurementData.sourceSubItemId;
+            document.getElementById('multiplicationFactor').value = measurementData.multiplicationFactor || 1;
+            
+            // Update the context display
+            updateRelatedContextDisplay();
+            
+            // Calculate and set the quantity
+            calculateRelatedQuantity();
+            
+            // Set the form values
+            document.getElementById('relatedLocation').value = measurementData.location || '';
+            document.getElementById('relatedNo1').value = measurementData.no1 || 1;
+            document.getElementById('relatedNo2').value = measurementData.no2 || 1;
+            document.getElementById('relatedNo3').value = measurementData.no3 || 1;
+            document.getElementById('relatedLength').value = measurementData.length || '';
+            document.getElementById('relatedBreadth').value = measurementData.breadth || '';
+            document.getElementById('relatedHeight').value = measurementData.height || '';
+            
+            // Set the context for saving
+            window.relatedCurrentContext = {
+                projectId: measurementData.projectId,
+                buildingId: measurementData.buildingId,
+                categoryId: measurementData.categoryId,
+                mainItemId: measurementData.mainItemId,
+                subItemId: measurementData.subItemId,
+                unit: measurementData.unit || "Cum"
+            };
+            
+            // Set edit mode
+            const form = document.getElementById('relatedMeasurementForm');
+            form.setAttribute('data-edit-mode', measurementId);
+            
+            // Clear additional rows (we're only editing a single measurement)
+            document.getElementById('relatedAdditionalRows').innerHTML = '';
+            
+            // Update total quantity
+            updateRelatedTotalQuantity();
+            
+            // Scroll to form
+            form.scrollIntoView({ behavior: 'smooth' });
+            
+            alert('Related measurement loaded for editing. Make your changes and click "Save Related Measurements" to update.');
+        }
+
+        function deleteRelatedMeasurement(measurementId) {
+            if (confirm('Are you sure you want to delete this related measurement?')) {
+                const user = auth.currentUser;
+                if (!user) return;
+                
+                const measurementRef = database.ref('users/' + user.uid + '/relatedMeasurements/' + measurementId);
+                measurementRef.remove()
+                    .then(() => {
+                        alert('Related measurement deleted successfully!');
+                        loadRelatedMeasurements(); // Reload the measurements list
+                    })
+                    .catch(error => {
+                        alert('Error deleting related measurement: ' + error.message);
+                    });
+            }
+        }
+    
+
+
+  // Report generation functionality
+        let currentReportType = '';
+        let currentReportData = null;
+
+        document.querySelectorAll('.generate-report-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                currentReportType = this.getAttribute('data-report-type');
+                const reportOptionsModal = new bootstrap.Modal(document.getElementById('reportOptionsModal'));
+                reportOptionsModal.show();
+            });
+        });
+
+        document.getElementById('modalReportProject').addEventListener('change', function() {
+            const projectId = this.value;
+            if (projectId) {
+                loadBuildingsForDropdown('modalReportBuilding', projectId);
+            } else {
+                const dropdown = document.getElementById('modalReportBuilding');
+                while (dropdown.options.length > 1) {
+                    dropdown.remove(1);
+                }
+            }
+        });
+
+        document.getElementById('generateReportWithOptions').addEventListener('click', function() {
+            const projectId = document.getElementById('modalReportProject').value;
+            const buildingId = document.getElementById('modalReportBuilding').value;
+            
+            if (!projectId) {
+                alert('Please select a project');
+                return;
+            }
+            
+            generateReport(currentReportType, projectId, buildingId);
+            bootstrap.Modal.getInstance(document.getElementById('reportOptionsModal')).hide();
+        });
+
+        function generateReport(type, projectId, buildingId) {
+            const user = auth.currentUser;
+            if (!user) return;
+            
+            // Show report preview card
+            document.getElementById('reportPreviewCard').style.display = 'block';
+            
+            // Get all necessary data for the report
+            const projectsRef = database.ref('users/' + user.uid + '/projects');
+            const buildingsRef = database.ref('users/' + user.uid + '/buildings');
+            const categoriesRef = database.ref('users/' + user.uid + '/categories');
+            const mainItemsRef = database.ref('users/' + user.uid + '/mainItems');
+            const subItemsRef = database.ref('users/' + user.uid + '/subItems');
+            const measurementsRef = database.ref('users/' + user.uid + '/measurements');
+            const relatedMeasurementsRef = database.ref('users/' + user.uid + '/relatedMeasurements');
+            
+            Promise.all([
+                projectsRef.once('value'),
+                buildingsRef.once('value'),
+                categoriesRef.once('value'),
+                mainItemsRef.once('value'),
+                subItemsRef.once('value'),
+                measurementsRef.once('value'),
+                relatedMeasurementsRef.once('value')
+            ]).then(([projectsSnap, buildingsSnap, categoriesSnap, mainItemsSnap, subItemsSnap, measurementsSnap, relatedMeasurementsSnap]) => {
+                const projects = projectsSnap.val();
+                const buildings = buildingsSnap.val();
+                const categories = categoriesSnap.val();
+                const mainItems = mainItemsSnap.val();
+                const subItems = subItemsSnap.val();
+                const measurements = measurementsSnap.val();
+                const relatedMeasurements = relatedMeasurementsSnap.val();
+                
+                // Filter measurements by selected project and building
+                let filteredMeasurements = {};
+                
+                if (measurements) {
+                    Object.keys(measurements).forEach(key => {
+                        const measurement = measurements[key];
+                        if (measurement.projectId === projectId && 
+                            (buildingId === 'all' || measurement.buildingId === buildingId)) {
+                            filteredMeasurements[key] = measurement;
+                        }
+                    });
+                }
+                
+                // Filter related measurements by selected project and building
+                let filteredRelatedMeasurements = {};
+                
+                if (relatedMeasurements) {
+                    Object.keys(relatedMeasurements).forEach(key => {
+                        const measurement = relatedMeasurements[key];
+                        if (measurement.projectId === projectId && 
+                            (buildingId === 'all' || measurement.buildingId === buildingId)) {
+                            filteredRelatedMeasurements[key] = measurement;
+                        }
+                    });
+                }
+                
+                // Combine regular measurements and related measurements
+                const allMeasurements = {...filteredMeasurements, ...filteredRelatedMeasurements};
+                
+                // Generate report based on type
+                let reportHTML = '';
+                
+                switch(type) {
+                    case 'detail':
+                        reportHTML = generateDetailReport(projects, buildings, categories, mainItems, subItems, allMeasurements, projectId, buildingId);
+                        break;
+                    case 'building':
+                        reportHTML = generateBuildingReport(projects, buildings, categories, mainItems, subItems, allMeasurements, projectId, buildingId);
+                        break;
+                    case 'cumulative':
+                        reportHTML = generateCumulativeReport(projects, buildings, categories, mainItems, subItems, allMeasurements, projectId, buildingId);
+                        break;
+                    case 'summary':
+                        reportHTML = generateSummaryReport(projects, buildings, categories, mainItems, subItems, allMeasurements, projectId, buildingId);
+                        break;
+                }
+                
+                document.getElementById('reportPreview').innerHTML = reportHTML;
+                
+                // Store report data for export
+                currentReportData = {
+                    type,
+                    projects,
+                    buildings,
+                    categories,
+                    mainItems,
+                    subItems,
+                    measurements: allMeasurements,
+                    projectId,
+                    buildingId
+                };
+            }).catch(error => {
+                alert('Error generating report: ' + error.message);
+            });
+        }
+
+// Function to generate report header with project information
+function generateReportHeader(projects, projectId) {
+    const project = projects[projectId];
+    if (!project) return '';
+    
+    return `
+        <div class="report-header">
+            <div class="report-title">Civil Estimate Report</div>
+            <div class="report-project-info"><strong>Project:</strong> ${project.name}</div>
+            <div class="report-project-info"><strong>Details:</strong> ${project.details || 'No details provided'}</div>
+            <div class="report-project-info"><strong>Location:</strong> ${project.location || 'No location specified'}</div>
+        </div>
+    `;
+}
+
+
+
+function generateDetailReport(projects, buildings, categories, mainItems, subItems, measurements, projectId, buildingId) {
+    let html = generateReportHeader(projects, projectId);
+    html += `<h4 class="mb-4">Detailed Measurements Report</h4>`;
+        
+
+            
+            const projectName = projects[projectId] ? projects[projectId].name : 'Unknown Project';
+            html += `<p><strong>Project:</strong> ${projectName}</p>`;
+            
+            if (buildingId !== 'all') {
+                const buildingName = buildings[buildingId] ? buildings[buildingId].name : 'Unknown Building';
+                html += `<p><strong>Building:</strong> ${buildingName}</p>`;
+            }
+            
+            if (!measurements || Object.keys(measurements).length === 0) {
+                html += '<p>No measurements found.</p>';
+                return html;
+            }
+            
+            // Group measurements by category, main item, and sub item
+            const categoryData = {};
+            
+            // First, organize by category
+            Object.keys(measurements).forEach(key => {
+                const measurement = measurements[key];
+                const subItemId = measurement.subItemId;
+                
+                if (!subItems[subItemId]) return;
+                
+                const subItem = subItems[subItemId];
+                const mainItemId = subItem.mainItemId;
+                
+                if (!mainItems[mainItemId]) return;
+                
+                const mainItem = mainItems[mainItemId];
+                const categoryId = mainItem.categoryId;
+                
+                if (!categories[categoryId]) return;
+                
+                const category = categories[categoryId];
+                
+                if (!categoryData[categoryId]) {
+                    categoryData[categoryId] = {
+                        category: category,
+                        mainItems: {}
+                    };
+                }
+                
+                if (!categoryData[categoryId].mainItems[mainItemId]) {
+                    categoryData[categoryId].mainItems[mainItemId] = {
+                        mainItem: mainItem,
+                        subItems: {}
+                    };
+                }
+                
+                if (!categoryData[categoryId].mainItems[mainItemId].subItems[subItemId]) {
+                    categoryData[categoryId].mainItems[mainItemId].subItems[subItemId] = {
+                        subItem: subItem,
+                        measurements: []
+                    };
+                }
+                
+                categoryData[categoryId].mainItems[mainItemId].subItems[subItemId].measurements.push(measurement);
+            });
+            
+            // Generate report HTML with proper hierarchy
+            Object.keys(categoryData).sort().forEach(categoryId => {
+                const category = categoryData[categoryId].category;
+                html += `<div class="category-header">${category.categoryNo} - ${category.name}</div>`;
+                
+                Object.keys(categoryData[categoryId].mainItems).sort().forEach(mainItemId => {
+                    const mainItem = categoryData[categoryId].mainItems[mainItemId].mainItem;
+                    html += `<div class="main-item-header">${mainItem.code} - ${mainItem.description}</div>`;
+                    
+                    Object.keys(categoryData[categoryId].mainItems[mainItemId].subItems).sort().forEach(subItemId => {
+                        const subItemData = categoryData[categoryId].mainItems[mainItemId].subItems[subItemId];
+                        const subItem = subItemData.subItem;
+                        let totalQty = 0;
+                        
+                        html += `
+                            <div class="sub-item-row mb-3">
+                                <strong>${subItem.code} - ${subItem.description}</strong>
+                                <table class="table table-sm table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Location</th>
+                                            <th>No1</th>
+                                            <th>No2</th>
+                                            <th>No3</th>
+                                            <th>Length</th>
+                                            <th>Breadth</th>
+                                            <th>Height</th>
+                                            <th>Quantity</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                        `;
+                        
+                        subItemData.measurements.forEach(measurement => {
+                            totalQty += parseFloat(measurement.quantity) || 0;
+                            html += `
+                                <tr>
+                                    <td>${measurement.location || ''}</td>
+                                    <td>${measurement.no1 || ''}</td>
+                                    <td>${measurement.no2 || ''}</td>
+                                    <td>${measurement.no3 || ''}</td>
+                                    <td>${measurement.length || ''}</td>
+                                    <td>${measurement.breadth || ''}</td>
+                                    <td>${measurement.height || ''}</td>
+                                    <td>${measurement.quantity || ''}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        html += `
+                                    <tr>
+                                        <td colspan="7" class="text-end"><strong>Total:</strong></td>
+                                        <td><strong>${totalQty.toFixed(3)}</strong></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        `;
+                    });
+                });
+            });
+            
+            return html;
+        }
+
+        // Other report generation functions would be similarly modified to accept projectId and buildingId parameters
+        // and filter data accordingly
+
+
+function generateBuildingReport(projects, buildings, categories, mainItems, subItems, measurements, projectId, buildingId) {
+    let html = generateReportHeader(projects, projectId);
+    html += `<h4 class="mb-4">Building-wise Abstract Report</h4>`;
+
+
+            
+            if (!measurements) {
+                html += '<p>No measurements found.</p>';
+                return html;
+            }
+            
+            // Group measurements by building, category, main item, and sub item
+            const buildingData = {};
+            
+            Object.keys(measurements).forEach(key => {
+                const measurement = measurements[key];
+                const buildingId = measurement.buildingId;
+                const subItemId = measurement.subItemId;
+                
+                if (!subItems[subItemId]) return;
+                
+                const subItem = subItems[subItemId];
+                const mainItemId = subItem.mainItemId;
+                
+                if (!mainItems[mainItemId]) return;
+                
+                const mainItem = mainItems[mainItemId];
+                const categoryId = mainItem.categoryId;
+                
+                if (!categories[categoryId]) return;
+                
+                if (!buildingData[buildingId]) {
+                    buildingData[buildingId] = {
+                        building: buildings[buildingId],
+                        categories: {}
+                    };
+                }
+                
+                if (!buildingData[buildingId].categories[categoryId]) {
+                    buildingData[buildingId].categories[categoryId] = {
+                        category: categories[categoryId],
+                        mainItems: {}
+                    };
+                }
+                
+                if (!buildingData[buildingId].categories[categoryId].mainItems[mainItemId]) {
+                    buildingData[buildingId].categories[categoryId].mainItems[mainItemId] = {
+                        mainItem: mainItem,
+                        subItems: {}
+                    };
+                }
+                
+                if (!buildingData[buildingId].categories[categoryId].mainItems[mainItemId].subItems[subItemId]) {
+                    buildingData[buildingId].categories[categoryId].mainItems[mainItemId].subItems[subItemId] = {
+                        subItem: subItem,
+                        quantity: 0
+                    };
+                }
+                
+                buildingData[buildingId].categories[categoryId].mainItems[mainItemId].subItems[subItemId].quantity += parseFloat(measurement.quantity) || 0;
+            });
+            
+            // Generate report HTML with proper hierarchy
+            Object.keys(buildingData).sort().forEach(buildingId => {
+                const building = buildingData[buildingId].building;
+                html += `<h5>Building: ${building.name}</h5>`;
+                
+                Object.keys(buildingData[buildingId].categories).sort().forEach(categoryId => {
+                    const category = buildingData[buildingId].categories[categoryId].category;
+                    html += `<div class="category-header">${category.categoryNo} - ${category.name}</div>`;
+                    
+                    Object.keys(buildingData[buildingId].categories[categoryId].mainItems).sort().forEach(mainItemId => {
+                        const mainItem = buildingData[buildingId].categories[categoryId].mainItems[mainItemId].mainItem;
+                        html += `<div class="main-item-header">${mainItem.code} - ${mainItem.description}</div>`;
+                        
+                        html += `
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Sub Item Code</th>
+                                        <th>Description</th>
+                                        <th>Unit</th>
+                                        <th>Quantity</th>
+                                        <th>Rate (₹)</th>
+                                        <th>Amount (₹)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        `;
+                        
+                        let categoryTotal = 0;
+                        
+                        Object.keys(buildingData[buildingId].categories[categoryId].mainItems[mainItemId].subItems).sort().forEach(subItemId => {
+                            const subItemData = buildingData[buildingId].categories[categoryId].mainItems[mainItemId].subItems[subItemId];
+                            const subItem = subItemData.subItem;
+                            const quantity = subItemData.quantity;
+                            const rate = parseFloat(subItem.rate) || 0;
+                            const amount = quantity * rate;
+                            categoryTotal += amount;
+                            
+                            html += `
+                                <tr>
+                                    <td>${subItem.code}</td>
+                                    <td>${subItem.description}</td>
+                                    <td>${subItem.unit}</td>
+                                    <td>${quantity.toFixed(3)}</td>
+                                    <td>${rate.toFixed(2)}</td>
+                                    <td>${amount.toFixed(2)}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        html += `
+                                <tr>
+                                    <td colspan="5" class="text-end"><strong>Category Total:</strong></td>
+                                    <td><strong>${categoryTotal.toFixed(2)}</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        `;
+                    });
+                });
+            });
+            
+            return html;
+        }
+function generateCumulativeReport(projects, buildings, categories, mainItems, subItems, measurements, projectId, buildingId) {
+    let html = generateReportHeader(projects, projectId);
+    html += `<h4 class="mb-4">Project Cumulative Abstract Report</h4>`;
+
+
+            
+            if (!measurements) {
+                html += '<p>No measurements found.</p>';
+                return html;
+            }
+            
+            // Group measurements by category, main item, and sub item
+            const categoryData = {};
+            
+            Object.keys(measurements).forEach(key => {
+                const measurement = measurements[key];
+                const subItemId = measurement.subItemId;
+                
+                if (!subItems[subItemId]) return;
+                
+                const subItem = subItems[subItemId];
+                const mainItemId = subItem.mainItemId;
+                
+                if (!mainItems[mainItemId]) return;
+                
+                const mainItem = mainItems[mainItemId];
+                const categoryId = mainItem.categoryId;
+                
+                if (!categories[categoryId]) return;
+                
+                if (!categoryData[categoryId]) {
+                    categoryData[categoryId] = {
+                        category: categories[categoryId],
+                        mainItems: {}
+                    };
+                }
+                
+                if (!categoryData[categoryId].mainItems[mainItemId]) {
+                    categoryData[categoryId].mainItems[mainItemId] = {
+                        mainItem: mainItem,
+                        subItems: {}
+                    };
+                }
+                
+                if (!categoryData[categoryId].mainItems[mainItemId].subItems[subItemId]) {
+                    categoryData[categoryId].mainItems[mainItemId].subItems[subItemId] = {
+                        subItem: subItem,
+                        quantity: 0
+                    };
+                }
+                
+                categoryData[categoryId].mainItems[mainItemId].subItems[subItemId].quantity += parseFloat(measurement.quantity) || 0;
+            });
+            
+            // Generate report HTML with proper hierarchy
+            html += `
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Main Item</th>
+                            <th>Sub Item</th>
+                            <th>Unit</th>
+                            <th>Quantity</th>
+                            <th>Rate (₹)</th>
+                            <th>Amount (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            let grandTotal = 0;
+            
+            Object.keys(categoryData).sort().forEach(categoryId => {
+                const category = categoryData[categoryId].category;
+                let categoryTotal = 0;
+                let firstCategoryRow = true;
+                
+                Object.keys(categoryData[categoryId].mainItems).sort().forEach(mainItemId => {
+                    const mainItem = categoryData[categoryId].mainItems[mainItemId].mainItem;
+                    let firstMainItemRow = true;
+                    
+                    Object.keys(categoryData[categoryId].mainItems[mainItemId].subItems).sort().forEach(subItemId => {
+                        const subItemData = categoryData[categoryId].mainItems[mainItemId].subItems[subItemId];
+                        const subItem = subItemData.subItem;
+                        const quantity = subItemData.quantity;
+                        const rate = parseFloat(subItem.rate) || 0;
+                        const amount = quantity * rate;
+                        categoryTotal += amount;
+                        grandTotal += amount;
+                        
+                        html += `
+                            <tr>
+                                <td>${firstCategoryRow ? category.categoryNo + ' - ' + category.name : ''}</td>
+                                <td>${firstMainItemRow ? mainItem.code + ' - ' + mainItem.description : ''}</td>
+                                <td>${subItem.code} - ${subItem.description}</td>
+                                <td>${subItem.unit}</td>
+                                <td>${quantity.toFixed(3)}</td>
+                                <td>${rate.toFixed(2)}</td>
+                                <td>${amount.toFixed(2)}</td>
+                            </tr>
+                        `;
+                        
+                        firstCategoryRow = false;
+                        firstMainItemRow = false;
+                    });
+                });
+                
+                // Add category total row
+                html += `
+                    <tr class="table-info">
+                        <td colspan="6" class="text-end"><strong>${category.categoryNo} Total:</strong></td>
+                        <td><strong>${categoryTotal.toFixed(2)}</strong></td>
+                    </tr>
+                `;
+            });
+            
+            // Add grand total row
+            html += `
+                <tr class="table-primary">
+                    <td colspan="6" class="text-end"><strong>Grand Total:</strong></td>
+                    <td><strong>${grandTotal.toFixed(2)}</strong></td>
+                </tr>
+            </tbody></table>`;
+            
+            return html;
+        }
+
+function generateSummaryReport(projects, buildings, categories, mainItems, subItems, measurements, projectId, buildingId) {
+    let html = generateReportHeader(projects, projectId);
+    html += `<h4 class="mb-4">Project Item-wise Summary Report</h4>`;
+            
+            if (!measurements) {
+                html += '<p>No measurements found.</p>';
+                return html;
+            }
+            
+            // Get all building IDs for columns
+            const buildingIds = Object.keys(buildings || {}).sort();
+            
+            // Group measurements by category, main item, sub item, and building
+            const categoryData = {};
+            
+            Object.keys(measurements).forEach(key => {
+                const measurement = measurements[key];
+                const buildingId = measurement.buildingId;
+                const subItemId = measurement.subItemId;
+                
+                if (!subItems[subItemId]) return;
+                
+                const subItem = subItems[subItemId];
+                const mainItemId = subItem.mainItemId;
+                
+                if (!mainItems[mainItemId]) return;
+                
+                const mainItem = mainItems[mainItemId];
+                const categoryId = mainItem.categoryId;
+                
+                if (!categories[categoryId]) return;
+                
+                if (!categoryData[categoryId]) {
+                    categoryData[categoryId] = {
+                        category: categories[categoryId],
+                        mainItems: {}
+                    };
+                }
+                
+                if (!categoryData[categoryId].mainItems[mainItemId]) {
+                    categoryData[categoryId].mainItems[mainItemId] = {
+                        mainItem: mainItem,
+                        subItems: {}
+                    };
+                }
+                
+                if (!categoryData[categoryId].mainItems[mainItemId].subItems[subItemId]) {
+                    categoryData[categoryId].mainItems[mainItemId].subItems[subItemId] = {
+                        subItem: subItem,
+                        buildings: {}
+                    };
+                }
+                
+                if (!categoryData[categoryId].mainItems[mainItemId].subItems[subItemId].buildings[buildingId]) {
+                    categoryData[categoryId].mainItems[mainItemId].subItems[subItemId].buildings[buildingId] = 0;
+                }
+                
+                categoryData[categoryId].mainItems[mainItemId].subItems[subItemId].buildings[buildingId] += parseFloat(measurement.quantity) || 0;
+            });
+            
+            // Generate report HTML with proper hierarchy
+            html += `
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Main Item</th>
+                            <th>Sub Item</th>
+                            <th>Unit</th>
+            `;
+            
+            // Add building columns
+            buildingIds.forEach(buildingId => {
+                html += `<th>${buildings[buildingId].name}</th>`;
+            });
+            
+            html += `
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            Object.keys(categoryData).sort().forEach(categoryId => {
+                const category = categoryData[categoryId].category;
+                let firstCategoryRow = true;
+                
+                Object.keys(categoryData[categoryId].mainItems).sort().forEach(mainItemId => {
+                    const mainItem = categoryData[categoryId].mainItems[mainItemId].mainItem;
+                    let firstMainItemRow = true;
+                    
+                    Object.keys(categoryData[categoryId].mainItems[mainItemId].subItems).sort().forEach(subItemId => {
+                        const subItemData = categoryData[categoryId].mainItems[mainItemId].subItems[subItemId];
+                        const subItem = subItemData.subItem;
+                        let rowTotal = 0;
+                        
+                        html += `
+                            <tr>
+                                <td>${firstCategoryRow ? category.categoryNo + ' - ' + category.name : ''}</td>
+                                <td>${firstMainItemRow ? mainItem.code + ' - ' + mainItem.description : ''}</td>
+                                <td>${subItem.code} - ${subItem.description}</td>
+                                <td>${subItem.unit}</td>
+                        `;
+                        
+                        // Add building quantities
+                        buildingIds.forEach(buildingId => {
+                            const quantity = subItemData.buildings[buildingId] || 0;
+                            rowTotal += quantity;
+                            html += `<td>${quantity.toFixed(3)}</td>`;
+                        });
+                        
+                        // Add row total
+                        html += `<td>${rowTotal.toFixed(3)}</td></tr>`;
+                        
+                        firstCategoryRow = false;
+                        firstMainItemRow = false;
+                    });
+                });
+            });
+            
+            html += `</tbody></table>`;
+            
+            return html;
+        }
+
+// Export functionality
+        document.getElementById('printReport').addEventListener('click', function() {
+            window.print();
+        });
+
+        document.getElementById('exportPdf').addEventListener('click', function() {
+            if (!currentReportData) {
+                alert('No report data to export');
+                return;
+            }
+            exportReportToPdf();
+        });
+
+        document.getElementById('exportExcel').addEventListener('click', function() {
+            if (!currentReportData) {
+                alert('No report data to export');
+                return;
+            }
+            exportReportToExcel();
+        });
+
+        function exportReportToPdf() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Add report header
+            const project = currentReportData.projects[currentReportData.projectId];
+            doc.setFontSize(16);
+            doc.text('Civil Estimate Report', 14, 15);
+            doc.setFontSize(12);
+            doc.text(`Project: ${project.name}`, 14, 25);
+            doc.text(`Details: ${project.details || 'No details provided'}`, 14, 35);
+            doc.text(`Location: ${project.location || 'No location specified'}`, 14, 45);
+            
+            // Add report title based on type
+            let reportTitle = '';
+            switch(currentReportData.type) {
+                case 'detail':
+                    reportTitle = 'Detailed Measurements Report';
+                    break;
+                case 'building':
+                    reportTitle = 'Building-wise Abstract Report';
+                    break;
+                case 'cumulative':
+                    reportTitle = 'Project Cumulative Abstract Report';
+                    break;
+                case 'summary':
+                    reportTitle = 'Project Item-wise Summary Report';
+                    break;
+            }
+            
+            doc.setFontSize(14);
+            doc.text(reportTitle, 14, 60);
+            
+            // Get all tables from the report preview
+            const tables = document.getElementById('reportPreview').getElementsByTagName('table');
+            
+            let yPosition = 70;
+            
+            for (let i = 0; i < tables.length; i++) {
+                // Add table to PDF using autoTable
+                doc.autoTable({
+                    html: tables[i],
+                    startY: yPosition,
+                    theme: 'grid',
+                    headStyles: {
+                        fillColor: [241, 245, 249],
+                        textColor: [44, 62, 80],
+                        fontStyle: 'bold'
+                    },
+                    styles: {
+                        fontSize: 8,
+                        cellPadding: 3,
+                    },
+                    margin: { top: 10 }
+                });
+                
+                // Update yPosition for next table
+                yPosition = doc.lastAutoTable.finalY + 15;
+                
+                // Add a new page if we're near the bottom
+                if (yPosition > 250 && i < tables.length - 1) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+            }
+            
+            // Save the PDF
+            const projectName = project.name.replace(/\s+/g, '_');
+            doc.save(`${projectName}_${currentReportData.type}_report.pdf`);
+        }
+
+        function exportReportToExcel() {
+            // Create a new workbook
+            const wb = XLSX.utils.book_new();
+            
+            // Get all tables from the report preview
+            const tables = document.getElementById('reportPreview').getElementsByTagName('table');
+            
+            for (let i = 0; i < tables.length; i++) {
+                // Convert table to worksheet
+                const ws = XLSX.utils.table_to_sheet(tables[i]);
+                
+                // Add worksheet to workbook
+                XLSX.utils.book_append_sheet(wb, ws, `Sheet${i+1}`);
+            }
+            
+            // Generate Excel file and trigger download
+            const project = currentReportData.projects[currentReportData.projectId];
+            const projectName = project.name.replace(/\s+/g, '_');
+            XLSX.writeFile(wb, `${projectName}_${currentReportData.type}_report.xlsx`);
+        }
+
+        // Initialize the application
+        function initApp() {
+            console.log('App initialized');
+            
+            // Set up report generation buttons
+            document.querySelectorAll('.generate-report-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    currentReportType = this.getAttribute('data-report-type');
+                    const reportOptionsModal = new bootstrap.Modal(document.getElementById('reportOptionsModal'));
+                    reportOptionsModal.show();
+                });
+            });
+            
+            // Set up report options modal
+            document.getElementById('modalReportProject').addEventListener('change', function() {
+                const projectId = this.value;
+                if (projectId) {
+                    loadBuildingsForDropdown('modalReportBuilding', projectId);
+                } else {
+                    const dropdown = document.getElementById('modalReportBuilding');
+                    while (dropdown.options.length > 1) {
+                        dropdown.remove(1);
+                    }
+                }
+            });
+            
+            document.getElementById('generateReportWithOptions').addEventListener('click', function() {
+                const projectId = document.getElementById('modalReportProject').value;
+                const buildingId = document.getElementById('modalReportBuilding').value;
+                
+                if (!projectId) {
+                    alert('Please select a project');
+                    return;
+                }
+                
+                generateReport(currentReportType, projectId, buildingId);
+                bootstrap.Modal.getInstance(document.getElementById('reportOptionsModal')).hide();
+            });
+        }
+
+
+
+        // Initialize the application
+        function initApp() {
+            // Set up any additional event listeners
+            console.log('App initialized');
+            
+            // Set up report format buttons
+            document.querySelectorAll('.report-format-buttons button').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const format = this.getAttribute('data-format');
+                    document.getElementById('exportReport').setAttribute('data-format', format);
+                    document.getElementById('exportReport').click();
+                });
+            });
+            
+            // Set up print button
+            document.getElementById('printReport').addEventListener('click', function() {
+                window.print();
+            });
+            
+            // Set up related measurements add row button
+            document.getElementById('relatedAddRowBtn').addEventListener('click', function() {
+                const additionalRows = document.getElementById('relatedAdditionalRows');
+                const rowCount = additionalRows.children.length + 1;
+                
+                const newRow = document.createElement('div');
+                newRow.className = 'measurement-row';
+                newRow.innerHTML = `
+                    <div class="row align-items-center">
+                        <div class="col-md-2 mb-3 measurement-col">
+                            <label for="relatedLocation_${rowCount}" class="form-label">Location</label>
+                            <input type="text" class="form-control location-input" id="relatedLocation_${rowCount}">
+                        </div>
+                        <div class="col-md-1 mb-3 measurement-col">
+                            <label for="relatedNo1_${rowCount}" class="form-label">No1</label>
+                            <input type="number" class="form-control no1-input" id="relatedNo1_${rowCount}" value="1" min="1">
+                        </div>
+                        <div class="col-md-1 mb-3 measurement-col">
+                            <label for="relatedNo2_${rowCount}" class="form-label">No2</label>
+                            <input type="number" class="form-control no2-input" id="relatedNo2_${rowCount}" value="1" min="1">
+                        </div>
+                        <div class="col-md-1 mb-3 measurement-col">
+                            <label for="relatedNo3_${rowCount}" class="form-label">No3</label>
+                            <input type="number" class="form-control no3-input" id="relatedNo3_${rowCount}" value="1" min="1">
+                        </div>
+                        <div class="col-md-1 mb-3 measurement-col">
+                            <label for="relatedLength_${rowCount}" class="form-label">Length</label>
+                            <input type="number" class="form-control measurement-input-sm length-input" id="relatedLength_${rowCount}" step="0.001" min="0">
+                        </div>
+                        <div class="col-md-1 mb-3 measurement-col">
+                            <label for="relatedBreadth_${rowCount}" class="form-label">Breadth</label>
+                            <input type="number" class="form-control measurement-input-sm breadth-input" id="relatedBreadth_${rowCount}" step="0.001" min="0">
+                        </div>
+                        <div class="col-md-1 mb-3 measurement-col">
+                            <label for="relatedHeight_${rowCount}" class="form-label">Height</label>
+                            <input type="number" class="form-control measurement-input-sm height-input" id="relatedHeight_${rowCount}" step="0.001" min="0">
+                        </div>
+                        <div class="col-md-2 mb-3 measurement-col">
+                            <label for="relatedQuantity_${rowCount}" class="form-label">Quantity</label>
+                            <input type="number" class="form-control qty-input quantity-input" id="relatedQuantity_${rowCount}" step="0.001" min="0" readonly>
+                        </div>
+                        <div class="col-md-2 mb-3 action-buttons-container">
+                            <button type="button" class="btn btn-sm btn-outline-danger clear-row-btn">
+                                Clear
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger remove-row-btn">
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                additionalRows.appendChild(newRow);
+                
+                // Add event listeners to the new row
+                const clearBtn = newRow.querySelector('.clear-row-btn');
+                const removeBtn = newRow.querySelector('.remove-row-btn');
+                const inputFields = newRow.querySelectorAll('input');
+                
+                clearBtn.addEventListener('click', function() {
+                    clearRelatedRow(newRow);
+                });
+                
+                removeBtn.addEventListener('click', function() {
+                    newRow.remove();
+                    updateRelatedTotalQuantity();
+                });
+                
+                // Add auto-calculation to input fields
+                inputFields.forEach(input => {
+                    if (!input.id.includes('quantity')) {
+                        input.addEventListener('input', function() {
+                            calculateRelatedRowQuantity(newRow);
+                            updateRelatedTotalQuantity();
+                        });
+                    }
+                });
+                
+                // Initial calculation
+                calculateRelatedRowQuantity(newRow);
+                updateRelatedTotalQuantity();
+            });
+            
+            // Set up related measurements clear form button
+            document.getElementById('relatedClearForm').addEventListener('click', function() {
+                document.getElementById('relatedLocation').value = '';
+                document.getElementById('relatedNo1').value = 1;
+                document.getElementById('relatedNo2').value = 1;
+                document.getElementById('relatedNo3').value = 1;
+                document.getElementById('relatedLength').value = '';
+                document.getElementById('relatedBreadth').value = '';
+                document.getElementById('relatedHeight').value = '';
+                document.getElementById('relatedQuantity').value = '';
+                
+                updateRelatedTotalQuantity();
+            });
+            
+            // Set up related measurements input listeners for auto-calculation
+            const relatedInputs = document.querySelectorAll('#relatedMeasurementForm input:not(#relatedQuantity)');
+            relatedInputs.forEach(input => {
+                input.addEventListener('input', function() {
+                    calculateRelatedMainFormQuantity();
+                    updateRelatedTotalQuantity();
+                });
+            });
+            
+            // Set up related measurements filter button
+            document.getElementById('relatedApplyFilters').addEventListener('click', function() {
+                applyRelatedFilters();
+            });
+            
+            // Set up report filter button
+            document.getElementById('applyReportFilters').addEventListener('click', function() {
+                // Just update the UI to show filters are applied
+                alert('Filters applied. Generate a report to see the filtered results.');
+            });
+        }
+
+        function calculateRelatedMainFormQuantity() {
+            const no1 = parseFloat(document.getElementById('relatedNo1').value) || 0;
+            const no2 = parseFloat(document.getElementById('relatedNo2').value) || 0;
+            const no3 = parseFloat(document.getElementById('relatedNo3').value) || 0;
+            const length = parseFloat(document.getElementById('relatedLength').value) || 0;
+            const breadth = parseFloat(document.getElementById('relatedBreadth').value) || 0;
+            const height = parseFloat(document.getElementById('relatedHeight').value) || 0;
+            
+            // Get the unit from the current context or from the selected sub item
+            let unit = "Cum"; // Default unit
+            if (window.relatedCurrentContext && window.relatedCurrentContext.unit) {
+                unit = window.relatedCurrentContext.unit;
+            } else {
+                const subItemSelect = document.getElementById('relatedContextSubItem');
+                if (subItemSelect && subItemSelect.selectedOptions[0]) {
+                    unit = subItemSelect.selectedOptions[0].getAttribute('data-unit') || "Cum";
+                }
+            }
+            
+            let quantity = 0;
+            
+            switch(unit) {
+                case "Cum":
+                    quantity = no1 * no2 * no3 * length * breadth * height;
+                    break;
+                case "Sqm":
+                    quantity = no1 * no2 * no3 * length * breadth;
+                    break;
+                case "Mtr":
+                    quantity = no1 * no2 * no3 * length;
+                    break;
+                case "Kg":
+                    quantity = no1 * no2 * no3 * length * breadth;
+                    break;
+                case "Ltr":
+                    quantity = no1 * no2 * no3 * length;
+                    break;
+                case "Each":
+                    quantity = no1 * no2 * no3;
+                    break;
+                case "Lumpsum":
+                    quantity = 1; // Lumpsum is always 1
+                    break;
+            }
+            
+            document.getElementById('relatedQuantity').value = quantity.toFixed(3);
+        }
+
+        function calculateRelatedRowQuantity(row) {
+            const no1 = parseFloat(row.querySelector('.no1-input').value) || 0;
+            const no2 = parseFloat(row.querySelector('.no2-input').value) || 0;
+            const no3 = parseFloat(row.querySelector('.no3-input').value) || 0;
+            const length = parseFloat(row.querySelector('.length-input').value) || 0;
+            const breadth = parseFloat(row.querySelector('.breadth-input').value) || 0;
+            const height = parseFloat(row.querySelector('.height-input').value) || 0;
+            
+            // Get the unit from the current context or from the selected sub item
+            let unit = "Cum"; // Default unit
+            if (window.relatedCurrentContext && window.relatedCurrentContext.unit) {
+                unit = window.relatedCurrentContext.unit;
+            } else {
+                const subItemSelect = document.getElementById('relatedContextSubItem');
+                if (subItemSelect && subItemSelect.selectedOptions[0]) {
+                    unit = subItemSelect.selectedOptions[0].getAttribute('data-unit') || "Cum";
+                }
+            }
+            
+            let quantity = 0;
+            
+            switch(unit) {
+                case "Cum":
+                    quantity = no1 * no2 * no3 * length * breadth * height;
+                    break;
+                case "Sqm":
+                    quantity = no1 * no2 * no3 * length * breadth;
+                    break;
+                case "Mtr":
+                    quantity = no1 * no2 * no3 * length;
+                    break;
+                case "Kg":
+                    quantity = no1 * no2 * no3 * length * breadth;
+                    break;
+                case "Ltr":
+                    quantity = no1 * no2 * no3 * length;
+                    break;
+                case "Each":
+                    quantity = no1 * no2 * no3;
+                    break;
+                case "Lumpsum":
+                    quantity = 1; // Lumpsum is always 1
+                    break;
+            }
+            
+            row.querySelector('.quantity-input').value = quantity.toFixed(3);
+        }
+
+        function updateRelatedTotalQuantity() {
+            let total = 0;
+            
+            // Add quantity from main form
+            const mainQuantity = parseFloat(document.getElementById('relatedQuantity').value) || 0;
+            total += mainQuantity;
+            
+            // Add quantities from additional rows
+            const additionalRows = document.getElementById('relatedAdditionalRows');
+            const quantityInputs = additionalRows.querySelectorAll('.quantity-input');
+            
+            quantityInputs.forEach(input => {
+                total += parseFloat(input.value) || 0;
+            });
+            
+            document.getElementById('relatedTotalQty').textContent = total.toFixed(3);
+        }
+
+        function clearRelatedRow(row) {
+            row.querySelector('.location-input').value = '';
+            row.querySelector('.no1-input').value = 1;
+            row.querySelector('.no2-input').value = 1;
+            row.querySelector('.no3-input').value = 1;
+            row.querySelector('.length-input').value = '';
+            row.querySelector('.breadth-input').value = '';
+            row.querySelector('.height-input').value = '';
+            row.querySelector('.quantity-input').value = '';
+            
+            updateRelatedTotalQuantity();
+        }
 function applyFilters() {
     const projectFilter = document.getElementById('filterProject').value;
     const buildingFilter = document.getElementById('filterBuilding').value;
@@ -2803,8 +4883,16 @@ function applyFilters() {
             document.getElementById('filterSubItemCode').value = '';
             applyFilters();
         }
- 
-       // Start the application
+
+           // Initialize the application
+        function initApp() {
+            console.log('App initialized');
+            
+            // Set up any additional event listeners
+            // ...
+        }
+
+        // Start the application
         initApp();
     </script>
 </body>
