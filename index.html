@@ -93,9 +93,23 @@
             max-width: 400px;
             margin: 100px auto;
             padding: 20px;
-            background: white;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .login-container input {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        body {
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080"><rect width="100%" height="100%" fill="%232c3e50"/><rect x="250" width="1670" height="1080" fill="white"/><rect x="0" y="0" width="250" height="1080" fill="%232c3e50"/><rect x="250" y="0" width="1670" height="56" fill="%232c3e50"/></svg>') no-repeat center center fixed;
+            background-size: cover;
+            min-height: 100vh;
         }
         
         .tab-content {
@@ -519,8 +533,12 @@
                                         </select>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="buildingFloors" class="form-label">No. of Floors</label>
-                                        <input type="number" class="form-control" id="buildingFloors" min="1" required>
+                                        <label for="buildingCount" class="form-label">No. of Buildings</label>
+                                        <input type="number" class="form-control" id="buildingCount" min="1" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="buildingPlinthArea" class="form-label">Plinth Area (Sqm)</label>
+                                        <input type="number" class="form-control" id="buildingPlinthArea" min="0" step="0.01" required>
                                     </div>
                                     <button type="submit" class="btn btn-primary">Save Building</button>
                                 </form>
@@ -550,7 +568,8 @@
                                                 <th>Name</th>
                                                 <th>Project</th>
                                                 <th>Type</th>
-                                                <th>Floors</th>
+                                                <th>No. of Buildings</th>
+                                                <th>Plinth Area (Sqm)</th>
                                                 <th>Created Date</th>
                                                 <th>Actions</th>
                                             </tr>
@@ -1010,12 +1029,23 @@
                                     </div>
                                 </div>
                                 <div class="row">
-                                    <div class="col-md-4 offset-md-4">
+                                    <div class="col-md-4">
                                         <div class="card">
                                             <div class="card-body text-center">
                                                 <h5>Project Item-wise Summary</h5>
                                                 <p class="text-muted">Landscape format</p>
                                                 <button class="btn btn-primary mt-2 generate-report-btn" data-report-type="summary">
+                                                    Generate Report
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card">
+                                            <div class="card-body text-center">
+                                                <h5>Project Cost Report</h5>
+                                                <p class="text-muted">Portrait format</p>
+                                                <button class="btn btn-primary mt-2 generate-report-btn" data-report-type="cost">
                                                     Generate Report
                                                 </button>
                                             </div>
@@ -1181,6 +1211,13 @@
                 
                 // Load initial data
                 loadProjects();
+                
+                // Automatically show dashboard (projects tab)
+                tabLinks.forEach(l => l.classList.remove('active'));
+                document.querySelector('[data-tab="projects"]').classList.add('active');
+                
+                tabPanes.forEach(pane => pane.classList.remove('active'));
+                document.getElementById('projects').classList.add('active');
             } else {
                 // User is signed out
                 loginSection.classList.remove('d-none');
@@ -1398,7 +1435,8 @@
                                 <td>${building.name}</td>
                                 <td>${projectName}</td>
                                 <td>${building.type}</td>
-                                <td>${building.floors}</td>
+                                <td>${building.buildings}</td>
+                                <td>${building.plinthArea || '0'}</td>
                                 <td>${new Date(building.createdAt).toLocaleDateString()}</td>
                                 <td>
                                     <button class="btn btn-sm btn-outline-primary me-1 edit-building-btn" data-id="${key}">
@@ -1428,7 +1466,7 @@
                         });
                     });
                 } else {
-                    buildingsList.innerHTML = '<tr><td colspan="6" class="text-center">No buildings found</td></tr>';
+                    buildingsList.innerHTML = '<tr><td colspan="7" class="text-center">No buildings found</td></tr>';
                 }
             });
         }
@@ -1845,7 +1883,7 @@
             const mainItemsRef = database.ref('users/' + user.uid + '/mainItems');
             const categoriesRef = database.ref('users/' + user.uid + '/categories');
             
-            measurementsRef.on('value', (snapshot) => {
+            measurementsRef.once('value', (snapshot) => {
                 const measurements = snapshot.val();
                 const measurementsList = document.getElementById('measurementsList');
                 measurementsList.innerHTML = '';
@@ -2026,29 +2064,40 @@
             
             // Check if we're in edit mode
             const editMode = this.getAttribute('data-edit-mode');
-            if (editMode) {
-                // Update existing project
-                projectsRef.child(editMode).update(projectData)
-                    .then(() => {
-                        alert('Project updated successfully!');
-                        this.reset();
+            
+            // First check for duplicate project names
+            projectsRef.once('value')
+                .then((snapshot) => {
+                    const projects = snapshot.val() || {};
+                    const isDuplicate = Object.entries(projects).some(([key, project]) => {
+                        // In edit mode, exclude the current project from duplicate check
+                        if (editMode && key === editMode) return false;
+                        return project.name.toLowerCase() === projectData.name.toLowerCase();
+                    });
+
+                    if (isDuplicate) {
+                        throw new Error('A project with this name already exists. Please use a different name.');
+                    }
+
+                    if (editMode) {
+                        // Update existing project
+                        return projectsRef.child(editMode).update(projectData);
+                    } else {
+                        // Add new project
+                        return projectsRef.push(projectData);
+                    }
+                })
+                .then(() => {
+                    alert(editMode ? 'Project updated successfully!' : 'Project saved successfully!');
+                    this.reset();
+                    if (editMode) {
                         this.removeAttribute('data-edit-mode');
                         this.querySelector('button[type="submit"]').textContent = 'Save Project';
-                    })
-                    .catch(error => {
-                        alert('Error updating project: ' + error.message);
-                    });
-            } else {
-                // Add new project
-                projectsRef.push(projectData)
-                    .then(() => {
-                        alert('Project saved successfully!');
-                        this.reset();
-                    })
-                    .catch(error => {
-                        alert('Error saving project: ' + error.message);
-                    });
-            }
+                    }
+                })
+                .catch(error => {
+                    alert(error.message);
+                });
         });
 
 // Add these form submission handlers after the project form handler
@@ -2062,7 +2111,8 @@ document.getElementById('buildingForm').addEventListener('submit', function(e) {
         name: document.getElementById('buildingName').value,
         projectId: document.getElementById('buildingProject').value,
         type: document.getElementById('buildingType').value,
-        floors: document.getElementById('buildingFloors').value,
+        buildings: document.getElementById('buildingCount').value,
+        plinthArea: document.getElementById('buildingPlinthArea').value,
         createdAt: new Date().toISOString()
     };
     
@@ -2788,7 +2838,8 @@ document.getElementById('subItemForm').addEventListener('submit', function(e) {
             document.getElementById('buildingName').value = buildingData.name;
             document.getElementById('buildingProject').value = buildingData.projectId;
             document.getElementById('buildingType').value = buildingData.type;
-            document.getElementById('buildingFloors').value = buildingData.floors;
+            document.getElementById('buildingCount').value = buildingData.buildings;
+            document.getElementById('buildingPlinthArea').value = buildingData.plinthArea || '';
             
             // Change the form to update mode
             const form = document.getElementById('buildingForm');
@@ -3231,6 +3282,9 @@ document.getElementById('subItemForm').addEventListener('submit', function(e) {
                     case 'summary':
                         reportHTML = generateSummaryReport(projects, buildings, categories, mainItems, subItems, allMeasurements, projectId, buildingId);
                         break;
+                    case 'cost':
+                        reportHTML = generateProjectCostReport(projects, buildings, categories, mainItems, subItems, allMeasurements, projectId, buildingId);
+                        break;
                 }
                 
                 document.getElementById('reportPreview').innerHTML = reportHTML;
@@ -3269,6 +3323,102 @@ function generateReportHeader(projects, projectId) {
 
 
 // Enhanced Detailed Report Function
+function generateProjectCostReport(projects, buildings, categories, mainItems, subItems, measurements, projectId, buildingId) {
+    let html = generateReportHeader(projects, projectId);
+    html += `<h4 class="mb-4">Project Cost Report</h4>`;
+    
+    const project = projects[projectId];
+    if (!project) {
+        html += '<p>Project not found.</p>';
+        return html;
+    }
+
+    // Get all buildings for the project
+    const projectBuildings = {};
+    Object.keys(buildings).forEach(key => {
+        if (buildings[key].projectId === projectId) {
+            projectBuildings[key] = buildings[key];
+        }
+    });
+
+    if (Object.keys(projectBuildings).length === 0) {
+        html += '<p>No buildings found for this project.</p>';
+        return html;
+    }
+
+    // Generate the cost report table
+    html += `
+    <div class="table-responsive mt-4">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Building Name</th>
+                    <th>Building Total Cost</th>
+                    <th>No of building</th>
+                    <th>Amount (Rs)</th>
+                    <th>Plinth area (sqm)</th>
+                    <th>Total Plinth area (sqm)</th>
+                    <th>Cost per Area (sqm)</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    let totalProjectCost = 0;
+    
+    // Calculate costs for each building
+    Object.keys(projectBuildings).forEach(buildingId => {
+        const building = projectBuildings[buildingId];
+        let buildingTotalCost = 0;
+        
+        // Calculate total cost for this building from measurements
+        Object.keys(measurements).forEach(key => {
+            const measurement = measurements[key];
+            if (measurement.buildingId === buildingId) {
+                const subItem = subItems[measurement.subItemId];
+                if (subItem) {
+                    const quantity = parseFloat(measurement.quantity) || 0;
+                    const rate = parseFloat(subItem.rate) || 0;
+                    buildingTotalCost += quantity * rate;
+                }
+            }
+        });
+
+        const buildingCount = parseInt(building.buildingCount) || 1;
+        const plinthArea = parseFloat(building.plinthArea) || 0;
+        const totalPlinthArea = plinthArea * buildingCount;
+        const totalBuildingCost = buildingTotalCost * buildingCount;
+        const costPerArea = totalPlinthArea > 0 ? (totalBuildingCost / totalPlinthArea).toFixed(2) : 0;
+
+        totalProjectCost += totalBuildingCost;
+
+        html += `
+            <tr>
+                <td>${building.name}</td>
+                <td>${buildingTotalCost.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                <td>${buildingCount}</td>
+                <td>${totalBuildingCost.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                <td>${plinthArea}</td>
+                <td>${totalPlinthArea}</td>
+                <td>${costPerArea}</td>
+            </tr>
+        `;
+    });
+
+    // Add total row
+    html += `
+            <tr class="table-secondary font-weight-bold">
+                <td colspan="3" class="text-end">Total Project Cost:</td>
+                <td colspan="4">${totalProjectCost.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+    `;
+
+    return html;
+}
+
 function generateDetailReport(projects, buildings, categories, mainItems, subItems, measurements, projectId, buildingId) {
     let html = generateReportHeader(projects, projectId);
     html += `<h4 class="mb-4">Detailed Measurements Report</h4>`;
@@ -4080,7 +4230,7 @@ function generateBuildingWorksheet(projects, buildings, categories, mainItems, s
     data.push(['Location:', project.location || '']);
     data.push([]);
     
-    // Group measurements by building
+    // Group measurements by building and item
     const buildingData = {};
     
     Object.keys(measurements).forEach(key => {
@@ -4093,16 +4243,21 @@ function generateBuildingWorksheet(projects, buildings, categories, mainItems, s
         if (!buildingData[measurement.buildingId]) {
             buildingData[measurement.buildingId] = {
                 building: building,
-                items: []
+                items: {}
             };
         }
         
-        buildingData[measurement.buildingId].items.push({
-            category: category,
-            mainItem: mainItem,
-            subItem: subItem,
-            measurement: measurement
-        });
+        const itemKey = `${category.categoryNo}-${mainItem.code}-${subItem.code}`;
+        if (!buildingData[measurement.buildingId].items[itemKey]) {
+            buildingData[measurement.buildingId].items[itemKey] = {
+                category: category,
+                mainItem: mainItem,
+                subItem: subItem,
+                totalQuantity: 0
+            };
+        }
+        
+        buildingData[measurement.buildingId].items[itemKey].totalQuantity += parseFloat(measurement.quantity) || 0;
     });
     
     // Add data
@@ -4114,15 +4269,15 @@ function generateBuildingWorksheet(projects, buildings, categories, mainItems, s
         
         let buildingTotal = 0;
         
-        buildingData[buildingId].items.forEach(item => {
-            const amount = (item.measurement.quantity || 0) * (item.subItem.rate || 0);
+        Object.values(buildingData[buildingId].items).forEach(item => {
+            const amount = item.totalQuantity * (item.subItem.rate || 0);
             buildingTotal += amount;
             
             data.push([
                 item.category ? `${item.category.categoryNo} - ${item.category.name}` : '',
                 item.mainItem ? `${item.mainItem.code} - ${item.mainItem.description}` : '',
                 item.subItem ? `${item.subItem.code} - ${item.subItem.description}` : '',
-                item.measurement.quantity || 0,
+                item.totalQuantity,
                 item.subItem.unit || '',
                 item.subItem.rate || 0,
                 amount
