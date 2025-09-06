@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Civil Estimate Manager</title>
+    <title>Project Estimate</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -364,10 +364,23 @@
     <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#">
-                <i class="fas fa-calculator me-2"></i>Civil Estimate Manager
-            </a>
-            <div class="d-flex">
+            <div class="d-flex flex-column">
+                <a class="navbar-brand mb-0" href="#">
+                    <i class="fas fa-calculator me-2"></i>Project Estimate
+                </a>
+                <small class="text-light ms-4">Designed By S.K. Acharya (DDF Consultants)</small>
+            </div>
+            <div class="d-flex align-items-center">
+                <div class="dropdown me-3">
+                    <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" id="downloadMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-download me-1"></i>Downloads
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="downloadMenuButton">
+                        <li><a class="dropdown-item" href="https://drive.google.com/file/d/1mgvrEengNe8K49-egINMs-6S4s2lS4hM/view?usp=drive_link" target="_blank">
+                            <i class="fas fa-file-download me-2"></i>Download Item Descriptions
+                        </a></li>
+                    </ul>
+                </div>
                 <span class="navbar-text me-3" id="userEmail"></span>
                 <button class="btn btn-outline-light btn-sm" id="logoutBtn">Logout</button>
             </div>
@@ -3313,7 +3326,7 @@ function generateReportHeader(projects, projectId) {
     
     return `
         <div class="report-header">
-            <div class="report-title">Civil Estimate Report</div>
+            <div class="report-title">Estimate Report</div>
             <div class="report-project-info"><strong>Project:</strong> ${project.name}</div>
             <div class="report-project-info"><strong>Details:</strong> ${project.details || 'No details provided'}</div>
             <div class="report-project-info"><strong>Location:</strong> ${project.location || 'No location specified'}</div>
@@ -4182,7 +4195,7 @@ function generateDetailWorksheet(projects, buildings, categories, mainItems, sub
     
     // Add header
     const project = projects[projectId];
-    data.push(['Civil Estimate Manager - Detailed Measurements Report']);
+    data.push(['Estimate Manager - Detailed Measurements Report']);
     data.push(['Project:', project.name]);
     data.push(['Details:', project.details || '']);
     data.push(['Location:', project.location || '']);
@@ -4224,7 +4237,7 @@ function generateBuildingWorksheet(projects, buildings, categories, mainItems, s
     
     // Add header
     const project = projects[projectId];
-    data.push(['Civil Estimate Manager - Building Wise Report']);
+    data.push(['Estimate Manager - Building Wise Report']);
     data.push(['Project:', project.name]);
     data.push(['Details:', project.details || '']);
     data.push(['Location:', project.location || '']);
@@ -4295,7 +4308,7 @@ function generateCumulativeWorksheet(projects, buildings, categories, mainItems,
     
     // Add header
     const project = projects[projectId];
-    data.push(['Civil Estimate Manager - Cumulative Report']);
+    data.push(['Estimate Manager - Cumulative Report']);
     data.push(['Project:', project.name]);
     data.push(['Details:', project.details || '']);
     data.push(['Location:', project.location || '']);
@@ -4376,7 +4389,7 @@ function generateSummaryWorksheet(projects, buildings, categories, mainItems, su
     
     // Add header
     const project = projects[projectId];
-    data.push(['Civil Estimate Manager - Summary Report']);
+    data.push(['Estimate Manager - Summary Report']);
     data.push(['Project:', project.name]);
     data.push(['Details:', project.details || '']);
     data.push(['Location:', project.location || '']);
